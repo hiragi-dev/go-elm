@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>godom</title>
+  <script src="wasm_exec.js"></script>
+  <script>
+    const go = new Go();
+    WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject)
+      .then((result) => go.run(result.instance))
+      .catch((err) => console.error(err));
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>
