@@ -1,8 +1,9 @@
 package main
 
 import (
+	"io"
+	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/kr/pretty"
 	"honnef.co/go/js/dom/v2"
@@ -86,15 +87,17 @@ func createElement[Msg any](v VDom[Msg], msgChan chan Msg) dom.Node {
 }
 
 func fetchUrl(url string) string {
-	time.Sleep(time.Second * 1)
-	return "some contents..."
+	res, _ := http.Get(url)
+	body, _ := io.ReadAll(res.Body)
+
+	return string(body)
 }
 
 func handleCmd[Msg any](cmd Cmd[Msg], msgChan chan Msg) {
 	switch c := cmd.(type) {
 	case HttpGet[Msg]:
 		go func() {
-			r := fetchUrl("")
+			r := fetchUrl(c.url)
 			m := c.onReceive(r)
 			msgChan <- m
 		}()
@@ -124,6 +127,7 @@ func Launch[State any, Msg any](root dom.Element, view func(State) VDom[Msg], ha
 
 type HttpGet[Msg any] struct {
 	onReceive func(string) Msg
+	url       string
 }
 
 func (HttpGet[Msg]) isCmd() {}
@@ -138,19 +142,11 @@ func main() {
 	h := HTML[UserMsg]{}
 
 	view := func(state UserState) VDom[UserMsg] {
-		var time = state.time
-		if time == "" {
-			time = "none"
-		} else {
-
-		}
-
 		return h.Div(
 			h.P(h.Text("Counter: "+strconv.Itoa(state.counterValue))),
 			h.Button(func() UserMsg { return AddCounter{} }, h.P(h.Text("click me"))),
 			h.Button(func() UserMsg { return GetTimeNow{} }, h.Hn(3, "hello")),
-			h.Hn(4, time),
-			// h.Button("")
+			h.Hn(4, If(state.time != "", state.time, "none")),
 		)
 	}
 
@@ -163,7 +159,7 @@ func main() {
 			pretty.Println(m)
 			return UserState{counterValue: state.counterValue + 1}, EmptyCmd{}
 		case GetTimeNow:
-			return state, HttpGet[UserMsg]{onReceive: func(r string) UserMsg { return SetTimeNow{time: r} }}
+			return state, HttpGet[UserMsg]{url: "https://jsonplaceholder.typicode.com/todos/1", onReceive: func(r string) UserMsg { return SetTimeNow{time: r} }}
 		case SetTimeNow:
 			time := m.time
 			return UserState{counterValue: state.counterValue, time: time}, EmptyCmd{}
