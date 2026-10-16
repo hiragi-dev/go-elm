@@ -1,19 +1,20 @@
 package main
 
-type VNode[Msg any] interface{ isVNode(Msg) }
+import "strconv"
 
-type VDiv[Msg any] struct {
-	children []VNode[Msg]
+type VDom[Msg any] struct {
+	tagName    string
+	attributes map[string]string
+	event      map[string]func() Msg
+	children   []VDom[Msg]
+	text       string
 }
 
-type VP[Msg any] struct {
-	content string
-}
+type Msg interface{ isMsg() }
 
-type VButton[Msg any] struct {
-	children []VNode[Msg]
-	onClick  func() Msg
-}
+type EmptyMsg struct{}
+
+func (EmptyMsg) isMsg() {}
 
 // VNodeはメッセージの型がジェネリクスになっているが、goの型推論では各VNodeごとにMsgの型注釈をする必要があり煩雑なので
 // HTML[Msg]なるビルダーっぽいものを用意して、型注釈を一箇所で済ませられるようにする
@@ -22,18 +23,31 @@ type VButton[Msg any] struct {
 type HTML[Msg any] struct {
 }
 
-func (VDiv[Msg]) isVNode(Msg)    {}
-func (VP[Msg]) isVNode(Msg)      {}
-func (VButton[Msg]) isVNode(Msg) {}
-
-func (h HTML[Msg]) Div(children ...VNode[Msg]) VNode[Msg] {
-	return VDiv[Msg]{children}
+func (h HTML[Msg]) Div(children ...VDom[Msg]) VDom[Msg] {
+	return VDom[Msg]{tagName: "div", attributes: make(map[string]string), children: children}
 }
 
-func (h HTML[Msg]) P(content string) VNode[Msg] {
-	return VP[Msg]{content}
+func (h HTML[Msg]) P(content VDom[Msg]) VDom[Msg] {
+	children := make([]VDom[Msg], 0)
+	children = append(children, content)
+
+	return VDom[Msg]{tagName: "p", children: children}
 }
 
-func (h HTML[Msg]) Button(onClick func() Msg, children ...VNode[Msg]) VNode[Msg] {
-	return VButton[Msg]{children, onClick}
+func (h HTML[Msg]) Hn(n uint, content string) VDom[Msg] {
+	children := make([]VDom[Msg], 0)
+	children = append(children, h.Text(content))
+
+	return VDom[Msg]{tagName: "h" + strconv.Itoa(int(n)), children: children}
+}
+
+func (h HTML[Msg]) Text(content string) VDom[Msg] {
+	return VDom[Msg]{text: content}
+}
+
+func (h HTML[Msg]) Button(onClick func() Msg, children ...VDom[Msg]) VDom[Msg] {
+	event := make(map[string]func() Msg)
+	event["click"] = onClick
+
+	return VDom[Msg]{tagName: "button", children: children, event: event}
 }
