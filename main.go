@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/kr/pretty"
 	"honnef.co/go/js/dom/v2"
 )
 
@@ -50,9 +49,9 @@ func createElement[Msg any](v VDom[Msg], msgChan chan Msg) dom.Node {
 			el.AppendChild(e)
 		}
 
-		for eventName, handler := range v.event {
+		for eventName, update := range v.event {
 			el.AddEventListener(eventName, false, func(e dom.Event) {
-				go func() { msgChan <- handler() }()
+				go func() { msgChan <- update() }()
 			})
 		}
 
@@ -104,7 +103,7 @@ func handleCmd[Msg any](cmd Cmd[Msg], msgChan chan Msg) {
 	}
 }
 
-func Launch[State any, Msg any](root dom.Element, view func(State) VDom[Msg], handler func(Msg, State) (State, Cmd[Msg]), initialState State) {
+func Launch[State any, Msg any](root dom.Element, view func(State) VDom[Msg], update func(Msg, State) (State, Cmd[Msg]), initialState State) {
 	msgChan := make(chan Msg)
 	currentState := initialState
 
@@ -114,12 +113,15 @@ func Launch[State any, Msg any](root dom.Element, view func(State) VDom[Msg], ha
 	render(root, dom)
 
 	for msg := range msgChan {
-		nextState, cmd := handler(msg, currentState)
+		nextState, cmd := update(msg, currentState)
 		currentState = nextState
 
 		go handleCmd(cmd, msgChan)
 
-		currentView := view(currentState)
+		currentView = view(currentState)
+		diffs := diff(currentView, currentView)
+		patch(root, diffs, msgChan)
+
 		dom := createElement(currentView, msgChan)
 		render(root, dom)
 	}
@@ -148,15 +150,41 @@ func main() {
 			h.Button(func() UserMsg { return GetTimeNow{} }, h.Hn(3, "hello")),
 			h.Hn(4, If(state.time != "", state.time, "none")),
 		)
+		// if state.counterValue == 0 {
+		// 	return h.Button(func() UserMsg { return AddCounter{} }, h.Hn(3, "A"))
+		// } else {
+		// 	return h.Hn(3, "B")
+		// }
 	}
 
-	handler := func(msg UserMsg, state UserState) (UserState, Cmd[UserMsg]) {
-		pretty.Println(msg)
+	// a := func(state UserState) VDom[UserMsg] {
+	// 	return h.Div(h.P(h.Hn(1, "hp")))
+	// }
+
+	// b := func(state UserState) VDom[UserMsg] {
+	// 	return h.Div(h.P(h.Hn(2, "henka")))
+	// }
+
+	// initState := UserState{}
+
+	// diffU := diff(a(initState), b(initState))
+
+	// pretty.Println(a(initState), b(initState), diffU)
+
+	// c := make(chan UserMsg)
+
+	// _ = createElement(a(initState), c)
+	// bn := createElement(b(initState), c)
+
+	// patch(bn, diffU, c)
+
+	update := func(msg UserMsg, state UserState) (UserState, Cmd[UserMsg]) {
+		// pretty.Println(msg)
 
 		switch m := msg.(type) {
 
 		case AddCounter:
-			pretty.Println(m)
+			// pretty.Println(m)
 			return UserState{counterValue: state.counterValue + 1}, EmptyCmd{}
 		case GetTimeNow:
 			return state, HttpGet[UserMsg]{url: "https://jsonplaceholder.typicode.com/todos/1", onReceive: func(r string) UserMsg { return SetTimeNow{time: r} }}
@@ -169,5 +197,7 @@ func main() {
 	}
 
 	root := dom.GetWindow().Document().QuerySelector("#app")
-	Launch(root, view, handler, UserState{counterValue: 0})
+
+	// root.AppendChild(bn)
+	Launch(root, view, update, UserState{counterValue: 0})
 }
