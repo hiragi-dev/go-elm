@@ -1,183 +1,90 @@
 package main
 
-import "github.com/kr/pretty"
+import (
+	"strconv"
 
-// import (
-// 	"encoding/json"
-// 	"fmt"
-// 	"strconv"
-// 	"strings"
-
-// 	"honnef.co/go/js/dom/v2"
-// )
+	"honnef.co/go/js/dom/v2"
+)
 
 type UserMsg struct {
 }
 
-func main() {
-
-	h := HTML[UserMsg]{}
-
-	vnode := h.Button(func() UserMsg { return UserMsg{} }, h.P("click me"))
-
-	pretty.Println(vnode)
+type UserState struct {
+	counterValue int
 }
 
-// type Msg struct {
-// 	Tag string
-// }
+func clear(root dom.Element) {
+	for _, c := range root.ChildNodes() {
+		root.RemoveChild(c)
+	}
+}
 
-// // type VNode struct {
-// // 	Tag      string
-// // 	Children []*VNode
-// // 	Text     string
-// // 	OnClick  func() Msg
-// // }
+func render(root dom.Element, dom dom.Node) {
+	clear(root)
+	root.AppendChild(dom)
+}
 
-// type Applier interface{ apply(*VNode) }
+func createElement[Msg any](v VNode[Msg], msg_chan chan Msg) dom.Node {
+	doc := dom.GetWindow().Document()
 
-// func Div(children ...Applier) *VNode {
-// 	n := &VNode{Tag: "Div", Text: ""}
+	switch n := v.(type) {
+	case VDiv[Msg]:
+		d := doc.CreateElement("div")
+		for _, c := range n.children {
+			e := createElement(c, msg_chan)
+			d.AppendChild(e)
+		}
+		return d
+	case VP[Msg]:
+		return doc.CreateTextNode(n.content)
+	case VButton[Msg]:
+		b := doc.CreateElement("button")
+		b.AddEventListener("click", false, func(e dom.Event) {
+			if n.onClick != nil {
+				go func() { msg_chan <- n.onClick() }()
+			}
+		})
+		return b
+	default:
 
-// 	for _, c := range children {
-// 		c.apply(n)
-// 	}
+	}
 
-// 	return n
-// }
+	return doc.CreateTextNode("unreachable!")
+}
 
-// func Text(content string) *VNode {
-// 	return &VNode{Tag: "Text", Text: content}
-// }
+func Launch[State any, Msg any](root dom.Element, view func(State) VNode[Msg], handler func(Msg, State) State, initialState State) {
+	msg_chan := make(chan Msg)
 
-// func Button(onClick func() Msg, children ...Applier) *VNode {
-// 	n := &VNode{Tag: "Button", OnClick: onClick}
+	// メッセージが届く前の初回描画
+	currentState := initialState
+	currentView := view(initialState)
+	dom := createElement(currentView, msg_chan)
+	render(root, dom)
 
-// 	for _, c := range children {
-// 		c.apply(n)
-// 	}
+	for msg := range msg_chan {
+		currentState = handler(msg, currentState)
+		currentView := view(currentState)
+		dom := createElement(currentView, msg_chan)
+		render(root, dom)
+	}
+}
 
-// 	return n
-// }
+func main() {
+	h := HTML[UserMsg]{}
 
-// func (c *VNode) apply(p *VNode) {
-// 	p.Children = append(p.Children, c)
-// }
+	view := func(state UserState) VNode[UserMsg] {
+		return h.Div(
+			h.P("Counter: "+strconv.Itoa(state.counterValue)),
+			h.Button(func() UserMsg { return UserMsg{} }, h.P("click me")),
+		)
+	}
 
-// type State struct {
-// 	value int
-// }
+	handler := func(msg UserMsg, state UserState) UserState {
+		println(state.counterValue)
 
-// var event_handler_l func(Msg)
-// var init_flag bool = true
+		return UserState{counterValue: state.counterValue + 1}
+	}
 
-// func createElement(v *VNode) dom.Node {
-// 	var retVal dom.Node
-
-// 	if v.Tag == "Text" {
-// 		return dom.GetWindow().Document().CreateTextNode(v.Text)
-// 	} else {
-// 		if v.Tag == "Div" || v.Tag == "Button" {
-// 			p := dom.GetWindow().Document().CreateElement(strings.ToLower(v.Tag))
-
-// 			if v.Tag == "Button" {
-// 				p.AddEventListener("click", false, func(e dom.Event) {
-// 					if v.OnClick != nil {
-// 						m := v.OnClick()
-// 						event_handler_l(m)
-// 						// dispatcher(m, state)
-// 					}
-// 				})
-// 			}
-
-// 			for _, c := range v.Children {
-// 				e := createElement(c)
-// 				p.AppendChild(e)
-// 			}
-
-// 			// return p
-// 			retVal = p
-// 		} else {
-// 			// return dom.GetWindow().Document().CreateElement(v.Tag)
-// 			retVal = dom.GetWindow().Document().CreateElement(v.Tag)
-// 		}
-// 	}
-
-// 	// if init_flag {
-// 	// 	init_flag = false
-// 	// 	event_handler_l(Msg{Tag: "init"})
-// 	// }
-
-// 	return retVal
-// }
-
-// func clear(root dom.Element) {
-// 	for _, c := range root.ChildNodes() {
-// 		root.RemoveChild(c)
-// 	}
-// }
-
-// type Var struct {
-// 	uuid int
-// }
-
-// var vars map[int]int = make(map[int]int)
-// var uuid_acc = 0
-
-// func createVar(init int) *Var {
-// 	uuid := uuid_acc
-// 	vars[uuid_acc] = init
-// 	uuid_acc += 1
-
-// 	return &Var{uuid: uuid}
-// }
-
-// func setVar(va *Var, v int) {
-// 	var_ref := vars[va.uuid]
-// 	if var_ref != 0 {
-// 		vars[va.uuid] = v
-// 	}
-// }
-
-// func getVar(va *Var) int {
-// 	return vars[va.uuid]
-// }
-
-// func main() {
-// 	vnodes := func(appState State) *VNode {
-// 		return Div(
-// 			Button(func() Msg {
-// 				return Msg{Tag: "onClick"}
-// 			}, Text("Click Me!")),
-// 			Text("Counter"+strconv.Itoa(appState.value)),
-// 		)
-// 	}
-
-// 	b, _ := json.MarshalIndent(vnodes, "", "  ")
-// 	fmt.Println(string(b))
-
-// 	doc := dom.GetWindow().Document()
-// 	root := doc.QuerySelector("#app")
-
-// 	appState := State{value: 999}
-
-// 	event_handler_l = func(m Msg) {
-// 		println("event handle")
-
-// 		if m.Tag == "onClick" {
-// 			appState.value = appState.value + 1
-// 		}
-
-// 		nextVNode := vnodes(appState)
-// 		clear(root)
-// 		root.AppendChild(createElement(nextVNode))
-// 	}
-
-// 	event_handler_l(Msg{Tag: "init"})
-
-// 	select {}
-// }
-
-// func render(appState State, vnode func(State) *VNode) {
-// 	vnode(appState)
-// }
+	root := dom.GetWindow().Document().QuerySelector("#app")
+	Launch(root, view, handler, UserState{counterValue: 0})
+}

@@ -15,7 +15,7 @@ type VButton[Msg any] struct {
 	onClick  func() Msg
 }
 
-// VNodeはメッセージがジェネリクスになっているが、goの型推論では各VNodeごとにMsgの型注釈する必要があり煩雑なので、
+// VNodeはメッセージの型がジェネリクスになっているが、goの型推論では各VNodeごとにMsgの型注釈をする必要があり煩雑なので
 // HTML[Msg]なるビルダーっぽいものを用意して、型注釈を一箇所で済ませられるようにする
 // ↓ ビルダーが無いとこうなってめんどい
 // Div[UserMsg](Button(func() UserMsg { return UserMsg{} }, P[UserMsg]("click me!")))
