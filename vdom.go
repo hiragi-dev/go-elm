@@ -19,8 +19,6 @@ func diff[M any](oldVDom VDom[M], newVDom VDom[M]) []Patch[M] {
 }
 
 func _diff[M any](oldVDom VDom[M], newVDom VDom[M], path []int, out *[]Patch[M]) {
-	// pretty.Println("old", oldVDom, "new", newVDom)
-
 	if oldVDom.tagName != newVDom.tagName || len(oldVDom.children) != len(newVDom.children) {
 		*out = append(*out, Patch[M]{path: path, newValue: newVDom})
 		return
@@ -38,30 +36,14 @@ func _diff[M any](oldVDom VDom[M], newVDom VDom[M], path []int, out *[]Patch[M])
 	}
 }
 
-func patch[M any](node dom.Node, diff []Patch[M], msgChan chan M) {
+func applyPatch[M any](node dom.Node, diff []Patch[M], msgChan chan M) {
 	for _, d := range diff {
 		var target = node
-		// var parent dom.Node
 		for _, i := range d.path {
-			// parent = target
-			// pretty.Println(i, target.ChildNodes())
-			// println(i)
-			// js.Global().Get("console").Call("log", "target", target.Underlying())
 			target = target.ChildNodes()[i]
 		}
 
-		// pretty.Println("tareget", target.NodeName())
-		// js.Global().Get("console").Call("log", "target", target.Underlying())
-		// target.Underlying()
-		// target = createElement(d.newValue, msgChan)
-		// target.AppendChild()
-		// if target.
 		newDom := createElement(d.newValue, msgChan)
-		// pretty.Println(newDom)
-		// pretty.Println("hello, ")
-		// js.Global().Get("console").Call("log", "target", newDom.Underlying())
 		target.ParentNode().ReplaceChild(newDom, target)
-		// parent.ReplaceChild(target, createElement(d.newValue, msgChan))
-		// target.ParentNode().RemoveChild(createElement(d.newValue, msgChan))
 	}
 }

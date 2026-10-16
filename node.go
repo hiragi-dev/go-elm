@@ -2,12 +2,27 @@ package main
 
 import "strconv"
 
+type Applier[M any] interface{ apply(*VDom[M]) }
+
 type VDom[Msg any] struct {
 	tagName    string
-	attributes map[string]string
+	attributes []Attribute[Msg]
 	event      map[string]func() Msg
 	children   []VDom[Msg]
 	text       string
+}
+
+func (v VDom[M]) apply(p *VDom[M]) {
+	p.children = append(p.children, v)
+}
+
+type Attribute[M any] struct {
+	key   string
+	value string
+}
+
+func (a Attribute[M]) apply(p *VDom[M]) {
+	p.attributes = append(p.attributes, a)
 }
 
 type Msg interface{ isMsg() }
@@ -24,7 +39,7 @@ type HTML[Msg any] struct {
 }
 
 func (h HTML[Msg]) Div(children ...VDom[Msg]) VDom[Msg] {
-	return VDom[Msg]{tagName: "div", attributes: make(map[string]string), children: children}
+	return VDom[Msg]{tagName: "div", attributes: make([]Attribute[Msg], 0), children: children}
 }
 
 func (h HTML[Msg]) P(content VDom[Msg]) VDom[Msg] {
@@ -45,9 +60,22 @@ func (h HTML[Msg]) Text(content string) VDom[Msg] {
 	return VDom[Msg]{text: content}
 }
 
-func (h HTML[Msg]) Button(onClick func() Msg, children ...VDom[Msg]) VDom[Msg] {
+func (h HTML[Msg]) Button(onClick func() Msg, applier ...Applier[Msg]) VDom[Msg] {
 	event := make(map[string]func() Msg)
 	event["click"] = onClick
 
-	return VDom[Msg]{tagName: "button", children: children, event: event}
+	children := make([]VDom[Msg], 0)
+	attributes := make([]Attribute[Msg], 0)
+
+	vdom := VDom[Msg]{tagName: "button", children: children, attributes: attributes, event: event}
+
+	for _, a := range applier {
+		a.apply(&vdom)
+	}
+
+	return vdom
+}
+
+func (h HTML[Msg]) Attr(key string, value string) Attribute[Msg] {
+	return Attribute[Msg]{key, value}
 }
