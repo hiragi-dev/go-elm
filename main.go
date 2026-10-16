@@ -25,14 +25,18 @@ type UserState struct {
 	time         string
 }
 
+func OnClick[M any](h func() M) Event[M] {
+	return Event[M]{key: "click", value: h}
+}
+
 func main() {
 	h := HTML[UserMsg]{}
 
 	view := func(state UserState) VDom[UserMsg] {
 		return h.Div(
 			h.P(h.Text("Counter: "+strconv.Itoa(state.counterValue))),
-			h.Button(func() UserMsg { return AddCounter{} }, h.P(h.Text("click me")), h.Attr("class", "bg-blue-500 text-white font-bold py-2 px-4 rounded")),
-			h.Button(func() UserMsg { return GetTimeNow{} }, h.Hn(3, strconv.Itoa(state.counterValue))),
+			h.Button(OnClick(func() UserMsg { return AddCounter{} }), h.P(h.Text("click me")), h.Attr("class", "bg-blue-500 text-white font-bold py-2 px-4 rounded")),
+			h.Button(OnClick(func() UserMsg { return GetTimeNow{} }), h.Hn(3, strconv.Itoa(state.counterValue))),
 			h.Hn(4, If(state.time != "", state.time, "none")),
 		)
 	}

@@ -25,6 +25,15 @@ func (a Attribute[M]) apply(p *VDom[M]) {
 	p.attributes = append(p.attributes, a)
 }
 
+type Event[M any] struct {
+	key   string
+	value func() M
+}
+
+func (e Event[M]) apply(p *VDom[M]) {
+	p.event[e.key] = e.value
+}
+
 type Msg interface{ isMsg() }
 
 type EmptyMsg struct{}
@@ -60,10 +69,8 @@ func (h HTML[Msg]) Text(content string) VDom[Msg] {
 	return VDom[Msg]{text: content}
 }
 
-func (h HTML[Msg]) Button(onClick func() Msg, applier ...Applier[Msg]) VDom[Msg] {
+func (h HTML[Msg]) Button(applier ...Applier[Msg]) VDom[Msg] {
 	event := make(map[string]func() Msg)
-	event["click"] = onClick
-
 	children := make([]VDom[Msg], 0)
 	attributes := make([]Attribute[Msg], 0)
 
