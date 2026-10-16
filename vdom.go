@@ -19,6 +19,8 @@ func diff[M any](oldVDom VDom[M], newVDom VDom[M]) []Patch[M] {
 }
 
 func _diff[M any](oldVDom VDom[M], newVDom VDom[M], path []int, out *[]Patch[M]) {
+	// pretty.Println("old", oldVDom, "new", newVDom)
+
 	if oldVDom.tagName != newVDom.tagName || len(oldVDom.children) != len(newVDom.children) {
 		*out = append(*out, Patch[M]{path: path, newValue: newVDom})
 		return

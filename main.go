@@ -118,12 +118,17 @@ func Launch[State any, Msg any](root dom.Element, view func(State) VDom[Msg], up
 
 		go handleCmd(cmd, msgChan)
 
-		currentView = view(currentState)
-		diffs := diff(currentView, currentView)
+		nextView := view(nextState)
+		diffs := diff(currentView, nextView)
+
+		currentView = nextView
+
+		// pretty.Println(diffs)
+
 		patch(root, diffs, msgChan)
 
-		dom := createElement(currentView, msgChan)
-		render(root, dom)
+		// dom := createElement(currentView, msgChan)
+		// render(root, dom)
 	}
 }
 
@@ -147,7 +152,7 @@ func main() {
 		return h.Div(
 			h.P(h.Text("Counter: "+strconv.Itoa(state.counterValue))),
 			h.Button(func() UserMsg { return AddCounter{} }, h.P(h.Text("click me"))),
-			h.Button(func() UserMsg { return GetTimeNow{} }, h.Hn(3, "hello")),
+			h.Button(func() UserMsg { return GetTimeNow{} }, h.Hn(3, strconv.Itoa(state.counterValue))),
 			h.Hn(4, If(state.time != "", state.time, "none")),
 		)
 		// if state.counterValue == 0 {
