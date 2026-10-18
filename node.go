@@ -74,6 +74,30 @@ func (h HTML[Msg]) P(content VDom[Msg], applier ...Applier[Msg]) VDom[Msg] {
 	return el
 }
 
+func (h HTML[Msg]) Ul(applier ...Applier[Msg]) VDom[Msg] {
+	children := make([]VDom[Msg], 0)
+
+	el := VDom[Msg]{tagName: "ul", children: children}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
+}
+
+func (h HTML[Msg]) Li(applier ...Applier[Msg]) VDom[Msg] {
+	children := make([]VDom[Msg], 0)
+
+	el := VDom[Msg]{tagName: "li", children: children}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
+}
+
 func (h HTML[Msg]) Hn(n uint, applier ...Applier[Msg]) VDom[Msg] {
 	children := make([]VDom[Msg], 0)
 
