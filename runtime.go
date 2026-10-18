@@ -10,6 +10,7 @@ import (
 type HttpGet[Msg any] struct {
 	onReceive func(string) Msg
 	url       string
+	headers   []string
 }
 
 func (HttpGet[Msg]) isCmd() {}
@@ -82,12 +83,12 @@ func createElement[Msg any](v VDom[Msg], msgChan chan Msg) dom.Node {
 	}
 }
 
-func Launch[State any, Msg any](root dom.Element, view func(State) VDom[Msg], update func(Msg, State) (State, Cmd[Msg]), initialState State) {
+func Launch[State any, Msg any](root dom.Element, view func(State) VDom[Msg], update func(Msg, State) (State, Cmd[Msg]), init func() (State, Cmd[Msg])) {
 	msgChan := make(chan Msg)
-	currentState := initialState
+	currentState, _ := init()
 
 	// メッセージが届く前の初回描画
-	currentView := view(initialState)
+	currentView := view(currentState)
 	dom := createElement(currentView, msgChan)
 	render(root, dom)
 

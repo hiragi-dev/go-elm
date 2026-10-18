@@ -8,6 +8,29 @@
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5.7.47/daisyui.css" rel="stylesheet" type="text/css">
   <!-- Tailwind CSS（ブラウザ版）。DOMを監視して、後から追加された class にもスタイルを当てる -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.11"></script>
+  <!-- 独自のユーティリティとアニメーション -->
+  <style type="text/tailwindcss">
+    @theme {
+      /* animate-rainbow: グラデーションの位置をずらし続けて、虹色を流す */
+      --animate-rainbow: rainbow 4s linear infinite;
+
+      @keyframes rainbow {
+        to {
+          background-position: 200% center;
+        }
+      }
+    }
+
+    /* text-rainbow: 文字そのものを虹色にする。背景を文字の幅の2倍にして、流したときに継ぎ目が出ないよう最初と最後を同じ色にしている */
+    @utility text-rainbow {
+      background-image: linear-gradient(to right,
+          var(--color-red-500), var(--color-orange-500), var(--color-yellow-500), var(--color-green-500),
+          var(--color-blue-500), var(--color-purple-500), var(--color-red-500));
+      background-size: 200% auto;
+      background-clip: text;
+      color: transparent;
+    }
+  </style>
   <script src="wasm_exec.js"></script>
   <script>
     const go = new Go();

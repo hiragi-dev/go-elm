@@ -18,6 +18,10 @@ type SetTimeNow struct{ time string }
 
 func (SetTimeNow) isUserMsg() {}
 
+type GetGitHubActivity struct{}
+
+func (GetGitHubActivity) isUserMsg() {}
+
 type UserState struct {
 	counterValue int
 	time         string
@@ -52,11 +56,8 @@ func (h HTML[M]) Profile() VDom[M] {
 		)
 	}
 
-	return h.Div(
-		h.Hn(2,
-			h.Text("PROFILE"),
-			h.Class("mb-2 text-md font-semibold tracking-tight text-violet-600"),
-		),
+	return h.Content(
+		"PROFILE",
 		h.Div(
 			h.Class("card bg-base-100 shadow-lg"),
 			h.Div(
@@ -96,6 +97,16 @@ func (h HTML[M]) Profile() VDom[M] {
 	)
 }
 
+func (h HTML[M]) Content(header string, inner VDom[M]) VDom[M] {
+	return h.Div(
+		h.Hn(2,
+			h.Text(header),
+			h.Class("mb-2 text-md font-semibold tracking-tight text-violet-600"),
+		),
+		inner,
+	)
+}
+
 func (h HTML[M]) Works() VDom[M] {
 	listRow := func(header VDom[M], title string, description string, link string) VDom[M] {
 		return h.Li(
@@ -116,11 +127,8 @@ func (h HTML[M]) Works() VDom[M] {
 		)
 	}
 
-	return h.Div(
-		h.Hn(2,
-			h.Text("WORKS"),
-			h.Class("mb-2 text-md font-semibold tracking-tight text-violet-600"),
-		),
+	return h.Content(
+		"WORKS",
 		h.Ul(
 			h.Class("list bg-base-100 rounded-box shadow-md overflow-hidden"),
 			listRow(
@@ -155,16 +163,41 @@ func (h HTML[Msg]) NavBar() VDom[Msg] {
 		h.Div(
 			h.Class("ml-auto flex gap-x-4"),
 			h.Link("PROFILE", "ok"),
+			h.Link("ACTIVITY", "ok"),
 			h.Link("WORKS", "ok"),
-			// h.Div(
-			// 	h.Class("btn btn-ghost btn-circle avatar "),
-			// 	h.Div(
-			// 		h.Class("w-10 rounded-full"),
-			// 		h.Img("https://avatars.githubusercontent.com/u/298766645?v=4"),
-			// 	),
-			// ),
 		),
 	)
+}
+
+func (h HTML[Msg]) Activity() VDom[Msg] {
+	return h.Content(
+		"ACTIVITY",
+		h.Div(
+			h.Class("card bg-base-100 shadow-lg"),
+			h.Div(
+				h.Class("card-body"),
+				h.Div(),
+			),
+		),
+	)
+}
+
+type Continue interface{ AndThen() }
+
+func GET[M any](url string, headers ...string) HttpGet[M] {
+	_headers := make([]string, 0)
+	_headers = append(_headers, headers...)
+
+	return HttpGet[M]{
+		url: url,
+		// onReceive: onReceive,
+		headers: _headers,
+	}
+}
+
+func (h HttpGet[M]) AndThen(c func(string) M) Cmd[M] {
+	h.onReceive = c
+	return h
 }
 
 func main() {
@@ -178,6 +211,7 @@ func main() {
 			h.Div(
 				h.Class("flex flex-col px-40 gap-y-10 mt-10"),
 				h.Profile(),
+				h.Activity(),
 				h.Works(),
 			),
 		)
@@ -201,5 +235,17 @@ func main() {
 	root := dom.GetWindow().Document().QuerySelector("#app")
 	// root.SetAttribute("class", "h-screen")
 
-	Launch(root, view, update, UserState{counterValue: 0})
+	init := func() (UserState, Cmd[UserMsg]) {
+
+		// HttpGet{
+		// 	url: "https://api.github.com/repos/hiragi-dev/go-elm/commits"
+		// }
+		initCmd :=
+			GET[UserMsg]("https://api.github.com/repos/hiragi-dev/go-elm/commits").
+				AndThen(func(string) UserMsg { return GetGitHubActivity{} })
+
+		return UserState{counterValue: 0}, initCmd
+	}
+
+	Launch(root, view, update, init)
 }
