@@ -26,14 +26,35 @@ type UserState struct {
 func (h HTML[Msg]) Typ(content string) VDom[Msg] {
 	return h.P(
 		h.Text(content),
-		h.Class("text-base-content/70 text-xs"),
+		h.Class("opacity-60 text-xs"),
+	)
+}
+
+func (h HTML[Msg]) Link(content string, url string) VDom[Msg] {
+	return h.A(
+		h.Class("link link-hover text-md font-semibold tracking-tight text-violet-600"),
+		h.Text(
+			content,
+		),
 	)
 }
 
 func (h HTML[M]) Profile() VDom[M] {
+	tableEntry := func(key string, value string) VDom[M] {
+		return h.Tr(
+			h.Th(
+				h.Class("px-0"),
+				h.Text(key),
+			),
+			h.Td(
+				h.Text(value),
+			),
+		)
+	}
+
 	return h.Div(
 		h.Hn(2,
-			h.Text("ABOUT"),
+			h.Text("PROFILE"),
 			h.Class("mb-2 text-md font-semibold tracking-tight text-violet-600"),
 		),
 		h.Div(
@@ -43,7 +64,7 @@ func (h HTML[M]) Profile() VDom[M] {
 				h.Div(
 					h.Class("flex"),
 					h.Div(
-						h.Class("flex items-center"),
+						h.Class("flex items-center w-1/4"),
 						h.Div(
 							h.Class("avatar"),
 							h.Div(
@@ -53,17 +74,19 @@ func (h HTML[M]) Profile() VDom[M] {
 						),
 					),
 					h.Div(
-						h.Class("ml-8 flex flex-col justify-center"),
+						h.Class("ml-8 flex flex-col w-full"),
 						h.Hn(
 							2,
-							h.Text("Hi, I'm hiragi 👋 — a student and hobbyist engineer in Japan."),
-							h.Class("text-2xl font-semibold text-gray-900"),
+							h.Text("hiragi-dev"),
+							h.Class("text-3xl font-semibold text-gray-900"),
 						),
-						h.Div(
-							h.Class("mt-2"),
-							h.P(
-								h.Text("I'm interested in low-level programming, and have built things like an SSH server in Rust to learn how they work. Lately I've been building an alarm clock that absolutely cannot be turned off until you walk to a location you registered in advance, running on a small M5Stack device. I'm also working as a long-term software engineering intern."),
-								h.Class("text-base opacity-60"),
+						h.Div(h.Class("my-1")),
+						h.Table(
+							h.Class("table"),
+							h.Tbody(
+								tableEntry("Currently", "Student / Long-term SWE intern"),
+								tableEntry("Languages", "Rust / C / Python / TypeScript"),
+								tableEntry("Interests", " Low-level programming / Algebraic effects / DIY keyboards"),
 							),
 						),
 					),
@@ -74,12 +97,13 @@ func (h HTML[M]) Profile() VDom[M] {
 }
 
 func (h HTML[M]) Works() VDom[M] {
-	listRow := func(header VDom[M], title string, description string) VDom[M] {
+	listRow := func(header VDom[M], title string, description string, link string) VDom[M] {
 		return h.Li(
-			h.Class("list-row ml-2"),
+			h.Class("list-row transition-colors duration-200 hover:bg-base-300 "),
 			header,
-			h.Div(
+			h.A(
 				h.Class("list-col-grow ml-2"),
+				h.Attr("href", link),
 				h.Div(
 					h.Class("text-md font-semibold"),
 					h.Text(title),
@@ -98,7 +122,7 @@ func (h HTML[M]) Works() VDom[M] {
 			h.Class("mb-2 text-md font-semibold tracking-tight text-violet-600"),
 		),
 		h.Ul(
-			h.Class("list bg-base-100 rounded-box shadow-md"),
+			h.Class("list bg-base-100 rounded-box shadow-md overflow-hidden"),
 			listRow(
 				h.Div(
 					h.Class("size-10 rounded-box"),
@@ -106,6 +130,7 @@ func (h HTML[M]) Works() VDom[M] {
 				),
 				"OneAlarm",
 				"絶対に電源が切れないアラーム",
+				"https://github.com/hiragi-dev/onealarm-doc",
 			),
 			listRow(
 				h.Div(
@@ -114,7 +139,30 @@ func (h HTML[M]) Works() VDom[M] {
 				),
 				"ssh-server",
 				"RFCを参照して実装したRust製SSHサーバ",
+				"https://github.com/hiragi-dev/ssh-server",
 			),
+		),
+	)
+}
+
+func (h HTML[Msg]) NavBar() VDom[Msg] {
+	return h.Div(
+		h.Class("navbar bg-base-100 shadow-sm px-40"),
+		h.Div(
+			h.Class("flex-1"),
+			h.P(h.Text("hiragi's portfolio"), h.Class("text-xl font-semibold")),
+		),
+		h.Div(
+			h.Class("ml-auto flex gap-x-4"),
+			h.Link("PROFILE", "ok"),
+			h.Link("WORKS", "ok"),
+			// h.Div(
+			// 	h.Class("btn btn-ghost btn-circle avatar "),
+			// 	h.Div(
+			// 		h.Class("w-10 rounded-full"),
+			// 		h.Img("https://avatars.githubusercontent.com/u/298766645?v=4"),
+			// 	),
+			// ),
 		),
 	)
 }
@@ -126,23 +174,7 @@ func main() {
 	view := func(state UserState) VDom[UserMsg] {
 		return h.Div(
 			h.Class("min-h-screen bg-base-200 antialiased"),
-			h.Div(
-				h.Class("navbar bg-base-100 shadow-sm px-40"),
-				h.Div(
-					h.Class("flex-1"),
-					h.P(h.Text("hiragi's portfolio"), h.Class("text-xl font-semibold")),
-				),
-				h.Div(
-					h.Class("ml-auto"),
-					h.Div(
-						h.Class("btn btn-ghost btn-circle avatar "),
-						h.Div(
-							h.Class("w-10 rounded-full"),
-							h.Img("https://avatars.githubusercontent.com/u/298766645?v=4"),
-						),
-					),
-				),
-			),
+			h.NavBar(),
 			h.Div(
 				h.Class("flex flex-col px-40 gap-y-10 mt-10"),
 				h.Profile(),

@@ -110,6 +110,90 @@ func (h HTML[Msg]) Hn(n uint, applier ...Applier[Msg]) VDom[Msg] {
 	return el
 }
 
+func (h HTML[Msg]) A(applier ...Applier[Msg]) VDom[Msg] {
+	children := make([]VDom[Msg], 0)
+
+	el := VDom[Msg]{tagName: "a", children: children}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
+}
+
+func (h HTML[Msg]) Table(applier ...Applier[Msg]) VDom[Msg] {
+	children := make([]VDom[Msg], 0)
+
+	el := VDom[Msg]{tagName: "table", children: children}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
+}
+
+func (h HTML[Msg]) Thead(applier ...Applier[Msg]) VDom[Msg] {
+	children := make([]VDom[Msg], 0)
+
+	el := VDom[Msg]{tagName: "thead", children: children}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
+}
+
+func (h HTML[Msg]) Tbody(applier ...Applier[Msg]) VDom[Msg] {
+	children := make([]VDom[Msg], 0)
+
+	el := VDom[Msg]{tagName: "tbody", children: children}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
+}
+
+func (h HTML[Msg]) Tr(applier ...Applier[Msg]) VDom[Msg] {
+	children := make([]VDom[Msg], 0)
+
+	el := VDom[Msg]{tagName: "tr", children: children}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
+}
+
+func (h HTML[Msg]) Th(applier ...Applier[Msg]) VDom[Msg] {
+	children := make([]VDom[Msg], 0)
+
+	el := VDom[Msg]{tagName: "th", children: children}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
+}
+
+func (h HTML[Msg]) Td(applier ...Applier[Msg]) VDom[Msg] {
+	children := make([]VDom[Msg], 0)
+
+	el := VDom[Msg]{tagName: "td", children: children}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
+}
+
 func (h HTML[Msg]) Text(content string, applier ...Applier[Msg]) VDom[Msg] {
 	el := VDom[Msg]{text: content}
 
