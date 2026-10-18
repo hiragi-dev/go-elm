@@ -33,6 +33,7 @@ Go で仮想DOMを自作する学習用プロジェクト。コンパイル対�
 ## ディレクトリ構成
 
 - `main.go` — wasm のエントリポイント
+- `cmd/devserver/` — ホットリロード付きの開発用サーバー（ホスト向けにビルドされる。wasm には含まれない）
 - `web/` — ブラウザに配信するファイル
   - `index.html` — wasm を読み込むページ（`#app` にマウントする想定）
   - `main.wasm`, `wasm_exec.js` — ビルド成果物（git 管理外）
@@ -42,6 +43,7 @@ Go で仮想DOMを自作する学習用プロジェクト。コンパイル対�
 ```sh
 make build   # web/main.wasm をビルドし、wasm_exec.js を GOROOT からコピー
 make serve   # ビルドしてから http://localhost:8080 で配信（python3 の http.server を使う）
+make dev     # http://localhost:8080 で配信し、.go の変更で再ビルド、web/ の変更でブラウザを自動リロード
 make clean   # ビルド成果物を削除
 ```
 

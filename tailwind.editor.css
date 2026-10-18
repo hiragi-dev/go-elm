@@ -1,0 +1,6 @@
+/*
+ * エディタ（Tailwind CSS IntelliSense）専用の入口ファイル。ブラウザには読み込ませない。
+ * 実際のスタイルは web/index.html の CDN 版 Tailwind と daisyUI が当てる。
+ * daisyUI のクラス（btn, navbar など）は補完・ホバーの対象外。
+ */
+@import "tailwindcss";

@@ -47,26 +47,53 @@ func (EmptyMsg) isMsg() {}
 type HTML[Msg any] struct {
 }
 
-func (h HTML[Msg]) Div(children ...VDom[Msg]) VDom[Msg] {
-	return VDom[Msg]{tagName: "div", attributes: make([]Attribute[Msg], 0), children: children}
+func (h HTML[Msg]) Div(applier ...Applier[Msg]) VDom[Msg] {
+	event := make(map[string]func() Msg)
+	children := make([]VDom[Msg], 0)
+	attributes := make([]Attribute[Msg], 0)
+
+	el := VDom[Msg]{tagName: "div", children: children, attributes: attributes, event: event}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
 }
 
-func (h HTML[Msg]) P(content VDom[Msg]) VDom[Msg] {
+func (h HTML[Msg]) P(content VDom[Msg], applier ...Applier[Msg]) VDom[Msg] {
 	children := make([]VDom[Msg], 0)
 	children = append(children, content)
 
-	return VDom[Msg]{tagName: "p", children: children}
+	el := VDom[Msg]{tagName: "p", children: children}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
 }
 
-func (h HTML[Msg]) Hn(n uint, content string) VDom[Msg] {
+func (h HTML[Msg]) Hn(n uint, applier ...Applier[Msg]) VDom[Msg] {
 	children := make([]VDom[Msg], 0)
-	children = append(children, h.Text(content))
 
-	return VDom[Msg]{tagName: "h" + strconv.Itoa(int(n)), children: children}
+	el := VDom[Msg]{tagName: "h" + strconv.Itoa(int(n)), children: children}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
 }
 
-func (h HTML[Msg]) Text(content string) VDom[Msg] {
-	return VDom[Msg]{text: content}
+func (h HTML[Msg]) Text(content string, applier ...Applier[Msg]) VDom[Msg] {
+	el := VDom[Msg]{text: content}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
 }
 
 func (h HTML[Msg]) Button(applier ...Applier[Msg]) VDom[Msg] {
@@ -83,6 +110,21 @@ func (h HTML[Msg]) Button(applier ...Applier[Msg]) VDom[Msg] {
 	return vdom
 }
 
+func (h HTML[Msg]) Img(srcUrl string) VDom[Msg] {
+	srcAttr := h.Attr("src", srcUrl)
+
+	attributes := make([]Attribute[Msg], 0)
+	attributes = append(attributes, srcAttr)
+
+	vdom := VDom[Msg]{tagName: "img", attributes: attributes}
+
+	return vdom
+}
+
 func (h HTML[Msg]) Attr(key string, value string) Attribute[Msg] {
 	return Attribute[Msg]{key, value}
+}
+
+func (h HTML[Msg]) Class(value string) Attribute[Msg] {
+	return h.Attr("class", value)
 }

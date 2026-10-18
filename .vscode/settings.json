@@ -4,5 +4,14 @@
             "GOOS": "js",
             "GOARCH": "wasm"
         }
-    }
+    },
+    // Tailwind CSS IntelliSense: Go の文字列の中でも class の補完・ホバーを効かせる
+    "tailwindCSS.experimental.configFile": "tailwind.editor.css",
+    "tailwindCSS.includeLanguages": {
+        "go": "html"
+    },
+    "tailwindCSS.experimental.classRegex": [
+        "Class\\(\\s*\"([^\"]*)\"",
+        "Attr\\(\\s*\"class\"\\s*,\\s*\"([^\"]*)\""
+    ]
 }
