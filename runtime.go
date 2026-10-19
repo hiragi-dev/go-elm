@@ -39,7 +39,7 @@ func fetchUrl(url string) string {
 	return string(body)
 }
 
-func createElement[Msg any](v VDom[Msg], msgChan chan Msg) dom.Node {
+func createElement[Msg any](v VNode[Msg], msgChan chan Msg) dom.Node {
 	doc := dom.GetWindow().Document()
 
 	if v.text == "" {
@@ -74,7 +74,7 @@ func createElement[Msg any](v VDom[Msg], msgChan chan Msg) dom.Node {
 
 func Launch[State any, Msg any, E any](
 	root dom.Element,
-	view func(State) VDom[Msg],
+	view func(State) VNode[Msg],
 	update func(Msg, State) (State, Cmd[E, Msg]),
 	makeEnv func(Std) E,
 	init func() (State, Cmd[E, Msg]),

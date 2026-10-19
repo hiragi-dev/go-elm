@@ -17,14 +17,14 @@ type SetGitHubActivity struct {
 
 func (SetGitHubActivity) isUserMsg() {}
 
-func (h HTML[Msg]) Typ(content string) VDom[Msg] {
+func (h HTML[Msg]) Typ(content string) VNode[Msg] {
 	return h.P(
 		h.Text(content),
 		h.Class("opacity-60 text-xs"),
 	)
 }
 
-func (h HTML[Msg]) Link(content string, url string) VDom[Msg] {
+func (h HTML[Msg]) Link(content string, url string) VNode[Msg] {
 	return h.A(
 		h.Class("link link-hover text-md font-semibold tracking-tight text-violet-600"),
 		h.Text(
@@ -33,8 +33,8 @@ func (h HTML[Msg]) Link(content string, url string) VDom[Msg] {
 	)
 }
 
-func (h HTML[M]) Profile() VDom[M] {
-	tableEntry := func(key string, value string) VDom[M] {
+func (h HTML[M]) Profile() VNode[M] {
+	tableEntry := func(key string, value string) VNode[M] {
 		return h.Tr(
 			h.Th(
 				h.Class("px-0"),
@@ -87,7 +87,7 @@ func (h HTML[M]) Profile() VDom[M] {
 	)
 }
 
-func (h HTML[M]) Content(header string, inner VDom[M]) VDom[M] {
+func (h HTML[M]) Content(header string, inner VNode[M]) VNode[M] {
 	return h.Div(
 		h.Hn(2,
 			h.Text(header),
@@ -97,8 +97,8 @@ func (h HTML[M]) Content(header string, inner VDom[M]) VDom[M] {
 	)
 }
 
-func (h HTML[M]) Works() VDom[M] {
-	listRow := func(header VDom[M], title string, description string, link string) VDom[M] {
+func (h HTML[M]) Works() VNode[M] {
+	listRow := func(header VNode[M], title string, description string, link string) VNode[M] {
 		return h.Li(
 			h.Class("list-row transition-colors duration-200 hover:bg-base-300 "),
 			header,
@@ -143,7 +143,7 @@ func (h HTML[M]) Works() VDom[M] {
 	)
 }
 
-func (h HTML[Msg]) NavBar() VDom[Msg] {
+func (h HTML[Msg]) NavBar() VNode[Msg] {
 	return h.Div(
 		h.Class("navbar bg-base-100 shadow-sm px-40"),
 		h.Div(
@@ -159,10 +159,10 @@ func (h HTML[Msg]) NavBar() VDom[Msg] {
 	)
 }
 
-func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
+func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VNode[Msg] {
 	type ColorAttr string
 
-	tableEntry := func(key string, repoName string, value string, colorAttr ColorAttr) VDom[Msg] {
+	tableEntry := func(key string, repoName string, value string, colorAttr ColorAttr) VNode[Msg] {
 		return h.Tr(
 			h.Th(
 				h.Class("px-0"),
@@ -180,7 +180,7 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
 		)
 	}
 
-	var activities VDom[Msg]
+	var activities VNode[Msg]
 	if commits, ok := commits.Get(); ok {
 
 		// リポジトリごとに表示色を分ける
@@ -248,7 +248,7 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
 
 }
 
-func (h HTML[Msg]) UserFooter() VDom[Msg] {
+func (h HTML[Msg]) UserFooter() VNode[Msg] {
 	return h.Footer(
 		h.Class("footer bg-neutral text-neutral-content p-10"),
 		// h.Nav
@@ -316,7 +316,7 @@ func DefaultUserEff(std Std) UserEff {
 func main() {
 	h := HTML[UserMsg]{}
 
-	view := func(state UserState) VDom[UserMsg] {
+	view := func(state UserState) VNode[UserMsg] {
 		return h.Div(
 			h.Class("min-h-screen bg-base-200 antialiased"),
 			h.NavBar(),
