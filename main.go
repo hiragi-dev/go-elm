@@ -254,8 +254,13 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VNode[Msg] {
 
 func (h HTML[Msg]) UserFooter() VNode[Msg] {
 	return h.Footer(
-		h.Class("footer bg-neutral text-neutral-content p-10"),
-		// h.Nav
+		h.Class("footer bg-base-100 p-10 px-40"),
+		h.Nav(
+			h.Hn(6,
+				h.Class("footer-title"),
+				h.Text("Socicl"),
+			),
+		),
 	)
 }
 
@@ -282,7 +287,6 @@ type githubInfo struct {
 
 func (r githubInfo) GetActivity(e Http) []GithubCommit {
 	return GetGitHubActivity(e)
-
 }
 
 type githubInfoMock struct {
@@ -322,14 +326,18 @@ func main() {
 
 	view := func(state UserState) VNode[UserMsg] {
 		return h.Div(
-			h.Class("min-h-screen bg-base-200 antialiased"),
+			h.Class("min-h-screen bg-base-200 antialiased flex flex-col"),
 			h.NavBar(),
 			h.Div(
-				h.Class("flex flex-col px-40 gap-y-10 mt-10"),
-				h.Profile(),
-				h.Activity(state.commits),
-				h.Works(),
+				h.Class("grow"),
+				h.Div(
+					h.Class("flex flex-col px-40 gap-y-10 my-10"),
+					h.Profile(),
+					h.Activity(state.commits),
+					h.Works(),
+				),
 			),
+			h.UserFooter(),
 		)
 	}
 
