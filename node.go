@@ -239,6 +239,16 @@ func (h HTML[Msg]) Img(srcUrl string) VDom[Msg] {
 	return vdom
 }
 
+func (h HTML[Msg]) Footer(applier ...Applier[Msg]) VDom[Msg] {
+	el := VDom[Msg]{tagName: "footer"}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
+}
+
 func (h HTML[Msg]) Attr(key string, value string) Attribute[Msg] {
 	return Attribute[Msg]{key, value}
 }

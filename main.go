@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/kr/pretty"
@@ -164,9 +165,10 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
 	// 	commitsDisp.children = append(commitsDisp.children,
 	// 		h.Typ(commit),
 	// 	)
+	type ColorAttr string
 	// }
 
-	tableEntry := func(key string, repoName string, value string) VDom[Msg] {
+	tableEntry := func(key string, repoName string, value string, colorAttr ColorAttr) VDom[Msg] {
 		return h.Tr(
 			h.Th(
 				h.Class("px-0"),
@@ -174,7 +176,7 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
 			),
 			h.Td(
 				h.Div(
-					h.Class("badge badge-soft badge-primary"),
+					h.Class(fmt.Sprintf("badge badge-soft badge-%s", colorAttr)),
 					h.Text(repoName),
 				),
 			),
@@ -186,6 +188,20 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
 
 	var activities VDom[Msg]
 	if commits, ok := commits.Get(); ok {
+
+		// リポジトリごとに表示色を分ける
+		repos := make(map[string]ColorAttr)
+		colorAttrs := []ColorAttr{"primary", "secondary", "accent", "info", "success", "warning", "error"}
+		acc := 0
+		for _, commit := range commits {
+			if _, ok := repos[commit.repoName]; ok {
+				continue
+			} else {
+				repos[commit.repoName] = colorAttrs[acc%len(colorAttrs)]
+				acc++
+			}
+		}
+
 		activities = h.Tbody()
 		for i, commit := range commits {
 			if i < 7 {
@@ -194,6 +210,7 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
 						commit.date.Format("2006/1/2 15:04"),
 						commit.repoName,
 						commit.message,
+						repos[commit.repoName],
 					),
 				)
 			} else {
@@ -275,7 +292,17 @@ type githubInfoMock struct {
 func (r githubInfoMock) GetActivity(e Http) []GithubCommit {
 	time.Sleep(time.Second * 1)
 
-	return []GithubCommit{{message: "test", repoName: "reporepo"}, {message: "test", repoName: "reporepo"}}
+	// 表示確認用のダミーデータ。リポジトリは全件異なる名前にして、badge の7色が1つずつ当たるようにしている
+	now := time.Now()
+	return []GithubCommit{
+		{date: now.Add(-25 * time.Minute), message: "impl keyed diff for list children", repoName: "go-elm"},
+		{date: now.Add(-3 * time.Hour), message: "support SSH_MSG_CHANNEL_REQUEST exec (RFC 4254 §6.5)", repoName: "ssh-server"},
+		{date: now.Add(-26 * time.Hour), message: "docs: add wiring diagram for M5Stack GPS module", repoName: "onealarm-doc"},
+		{date: now.Add(-2 * 24 * time.Hour), message: "read GPS fix and compare with registered location", repoName: "onealarm-firmware"},
+		{date: now.Add(-4 * 24 * time.Hour), message: "add layout for 40% ortholinear with rotary encoder", repoName: "keyboard-layout"},
+		{date: now.Add(-9 * 24 * time.Hour), message: "chapter 3: effect handlers and one-shot continuations", repoName: "notes"},
+		{date: now.Add(-20 * 24 * time.Hour), message: "initial commit", repoName: "dotfiles"},
+	}
 }
 
 type UserEff interface {
