@@ -182,7 +182,6 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VNode[Msg] {
 
 	var activities VNode[Msg]
 	if commits, ok := commits.Get(); ok {
-
 		// リポジトリごとに表示色を分ける
 		repos := make(map[string]ColorAttr)
 		colorAttrs := []ColorAttr{"primary", "secondary", "accent", "info", "success", "warning", "error"}
@@ -196,14 +195,14 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VNode[Msg] {
 			}
 		}
 
-		activities = h.Tbody()
+		table := h.Tbody()
 		for i, commit := range commits {
 			// 表示するコミットは最大7件
 			if i >= 7 {
 				break
 			}
 
-			activities.children = append(activities.children,
+			table.children = append(table.children,
 				tableEntry(
 					commit.date.Format("2006/1/2 15:04"),
 					commit.repoName,
@@ -213,9 +212,24 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VNode[Msg] {
 			)
 
 		}
+
+		activities = h.Table(
+			h.Class("table"),
+			h.Thead(
+				h.Tr(
+					h.Th(h.Text("Time")),
+					h.Th(h.Text("Repository")),
+					h.Th(h.Text("commit message")),
+				),
+			),
+			table,
+		)
 	} else {
-		activities = h.Span(
-			h.Class("loading loading-spinner loading-md text-violet-600"),
+		activities = h.Div(
+			h.Class("flex justify-center"),
+			h.Span(
+				h.Class("loading loading-spinner loading-md text-violet-600"),
+			),
 		)
 	}
 
@@ -229,17 +243,7 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VNode[Msg] {
 					h.Class("flex"),
 					h.Div(
 						h.Class("ml-8 flex flex-col w-full"),
-						h.Table(
-							h.Class("table"),
-							h.Thead(
-								h.Tr(
-									h.Th(h.Text("Time")),
-									h.Th(h.Text("Repository")),
-									h.Th(h.Text("commit message")),
-								),
-							),
-							activities,
-						),
+						activities,
 					),
 				),
 			),
