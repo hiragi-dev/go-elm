@@ -26,7 +26,7 @@ func (h HTML[Msg]) Typ(content string) VNode[Msg] {
 
 func (h HTML[Msg]) Link(content string, url string) VNode[Msg] {
 	return h.A(
-		h.Class("link link-hover text-md font-semibold tracking-tight text-violet-600"),
+		h.Class("link link-hover text-md font-semibold opacity-60 tracking-tight"),
 		h.Text(
 			content,
 		),
@@ -68,7 +68,7 @@ func (h HTML[M]) Profile() VNode[M] {
 						h.Class("ml-8 flex flex-col w-full"),
 						h.Hn(
 							2,
-							h.Text("hiragi-dev"),
+							h.Text("hiragi"),
 							h.Class("text-3xl font-semibold text-gray-900"),
 						),
 						h.Div(h.Class("my-1")),
@@ -145,16 +145,18 @@ func (h HTML[M]) Works() VNode[M] {
 
 func (h HTML[Msg]) NavBar() VNode[Msg] {
 	return h.Div(
-		h.Class("navbar bg-base-100 shadow-sm px-40"),
+		h.Class("navbar bg-base-100 shadow-sm"),
 		h.Div(
-			h.Class("flex-1"),
-			h.P(h.Text("hiragi's portfolio"), h.Class("text-xl font-semibold")),
-		),
-		h.Div(
-			h.Class("ml-auto flex gap-x-4"),
-			h.Link("PROFILE", "ok"),
-			h.Link("ACTIVITY", "ok"),
-			h.Link("WORKS", "ok"),
+			h.Class("flex w-full lg:w-240 lg:px-0 px-4 mx-auto justify-between"),
+			h.Div(
+				h.P(h.Text("hiragi's portfolio"), h.Class("text-xl font-semibold")),
+			),
+			h.Div(
+				h.Class("flex gap-x-4"),
+				h.Link("PROFILE", "ok"),
+				h.Link("ACTIVITY", "ok"),
+				h.Link("WORKS", "ok"),
+			),
 		),
 	)
 }
@@ -254,12 +256,15 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VNode[Msg] {
 
 func (h HTML[Msg]) UserFooter() VNode[Msg] {
 	return h.Footer(
-		h.Class("footer bg-base-100 p-10 px-40"),
+		h.Class("footer bg-base-200 p-10 px-40 flex justify-center"),
 		h.Nav(
-			h.Hn(6,
-				h.Class("footer-title"),
-				h.Text("Socicl"),
-			),
+			// h.Hn(6,
+			// 	h.Class("footer-title"),
+			// 	h.Text("Socicl"),
+			// ),
+			// h.P(h.Text(" © 2026 hiragi")),
+			// h.P(h.Text("Github / Qiita")),
+			h.Typ("© 2026 hiragi. All rights reserved."),
 		),
 	)
 }
@@ -329,9 +334,13 @@ func main() {
 			h.Class("min-h-screen bg-base-200 antialiased flex flex-col"),
 			h.NavBar(),
 			h.Div(
-				h.Class("grow"),
+				h.Class("flex grow justify-center"),
 				h.Div(
-					h.Class("flex flex-col px-40 gap-y-10 my-10"),
+					// h.Class("flex flex-col lg:w-1/2 sm:w-4/5 gap-y-10 my-10"),
+
+					h.Class("flex flex-col gap-y-10 my-10 w-full lg:w-240 lg:px-0 px-4 mx-auto"),
+					// lg:px-80
+					// h.NavBar(),
 					h.Profile(),
 					h.Activity(state.commits),
 					h.Works(),
