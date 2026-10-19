@@ -194,6 +194,16 @@ func (h HTML[Msg]) Td(applier ...Applier[Msg]) VDom[Msg] {
 	return el
 }
 
+func (h HTML[Msg]) Span(applier ...Applier[Msg]) VDom[Msg] {
+	el := VDom[Msg]{tagName: "span"}
+
+	for _, a := range applier {
+		a.apply(&el)
+	}
+
+	return el
+}
+
 func (h HTML[Msg]) Text(content string, applier ...Applier[Msg]) VDom[Msg] {
 	el := VDom[Msg]{text: content}
 

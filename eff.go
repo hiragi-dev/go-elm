@@ -1,60 +1,53 @@
 package main
 
 import (
-	"reflect"
+	"io"
+	"net/http"
+	"net/url"
 )
 
-type AnyOp interface{ isOp() }
-
-type Op[R any] interface {
-	AnyOp
-	isEff(R)
+type Http interface {
+	Get(url string, queries url.Values) string
+	Put(url string, value string, headers ...string)
 }
 
-type HttpGet struct {
-	url     string
-	headers []string
+type Console interface {
+	Log(content string)
 }
 
-func (HttpGet) isEff(AnyOp) {}
-
-func (HttpGet) isOp() {}
-
-type Ctl[R any] interface {
-	isCtl(R)
+type Std interface {
+	Http
+	Console
 }
 
-type Resumption[R any] struct {
-	retVal R
+type browserStd struct{}
+
+func DefaultStd() Std { return browserStd{} }
+
+func (r browserStd) Get(url string, queries url.Values) string {
+	client := &http.Client{}
+
+	req, _ := http.NewRequest(
+		"GET",
+		url,
+		nil,
+	)
+
+	req.Header = http.Header{}
+
+	// q := req.URL.Query()
+	req.URL.RawQuery = queries.Encode()
+
+	res, _ := client.Do(req)
+	body, _ := io.ReadAll(res.Body)
+
+	return string(body)
 }
 
-func (Resumption[R]) isCtl(R) {}
+func (r browserStd) Put(url string, value string, headers ...string) {
 
-type Handlers map[reflect.Type]func(any) any
-
-func (hs Handlers) On[E Op[R], R any](f func(E) R) {
-	hs[reflect.TypeFor[E]()] = func(a any) any {
-		return f(a.(E))
-	}
 }
 
-func SystemHandler() Handlers {
-	handlers := Handlers{}
+func (r browserStd) Log(content string) {
 
-	// handlers.On(func(arg HttpGet) string {
-	// 	pretty.Println("handler got ", arg)
-	// 	return "handler return value"
-	// })
-
-	return handlers
 }
-
-// func SystemHandler[R any](eff Op[R]) Ctl[R] {
-// 	switch op := eff.(type) {
-// 	case HttpGet:
-// 		pretty.Println("SystemHandler Get ", op)
-// 		return Resumption[string]{retVal: ""}
-// 	default:
-// 		return Resumption{}
-// 	}
-// }

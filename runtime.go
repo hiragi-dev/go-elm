@@ -3,25 +3,23 @@ package main
 import (
 	"io"
 	"net/http"
-	"reflect"
 
-	"github.com/kr/pretty"
 	"honnef.co/go/js/dom/v2"
 )
 
-// type HttpGet[Msg any] struct {
-// 	onReceive func(string) Msg
-// 	url       string
-// 	headers   []string
-// }
+type Cmd[Env any, M any] func(r Env, send func(M))
 
-// func (HttpGet[Msg]) isCmd() {}
+func AsyncDo[Env, M any](f func(e Env) M) Cmd[Env, M] {
+	return func(r Env, send func(M)) {
+		send(f(r))
+	}
+}
 
-type Cmd[Msg any] interface{ isCmd() }
+func None[Env, M any]() Cmd[Env, M] {
+	return func(_ Env, _ func(M)) {
 
-type EmptyCmd struct{}
-
-func (EmptyCmd) isCmd() {}
+	}
+}
 
 func render(root dom.Element, dom dom.Node) {
 	clear(root)
@@ -40,17 +38,6 @@ func fetchUrl(url string) string {
 
 	return string(body)
 }
-
-// func handleCmd[Msg any](cmd Cmd[Msg], msgChan chan Msg) {
-// 	switch c := cmd.(type) {
-// 	case HttpGet[Msg]:
-// 		go func() {
-// 			r := fetchUrl(c.url)
-// 			m := c.onReceive(r)
-// 			msgChan <- m
-// 		}()
-// 	}
-// }
 
 func createElement[Msg any](v VDom[Msg], msgChan chan Msg) dom.Node {
 	doc := dom.GetWindow().Document()
@@ -85,60 +72,35 @@ func createElement[Msg any](v VDom[Msg], msgChan chan Msg) dom.Node {
 	}
 }
 
-func Launch[State any, Msg any](
+func Launch[State any, Msg any, E any](
 	root dom.Element,
 	view func(State) VDom[Msg],
-	update func(*Eff, Msg, State) State,
-	init func(*Eff) State,
+	update func(Msg, State) (State, Cmd[E, Msg]),
+	makeEnv func(Std) E,
+	init func() (State, Cmd[E, Msg]),
 ) {
-
-	eff := &Eff{req: make(chan Op[any]), res: make(chan any)}
-
 	msgChan := make(chan Msg)
-	currentState := init(eff)
+	currentState, initCmd := init()
 
 	// メッセージが届く前の初回描画
 	currentView := view(currentState)
 	dom := createElement(currentView, msgChan)
 	render(root, dom)
 
-	go func() {
-		for msg := range msgChan {
-			nextState := update(eff, msg, currentState)
+	env := makeEnv(DefaultStd())
 
-			nextView := view(nextState)
-			patch := diff(currentView, nextView)
+	go initCmd(env, func(m Msg) { msgChan <- m })
 
-			currentView = nextView
+	for msg := range msgChan {
+		nextState, cmd := update(msg, currentState)
 
-			applyPatch(root, patch, msgChan)
-		}
-	}()
+		go cmd(env, func(m Msg) { msgChan <- m })
 
-	handlers := SystemHandler()
+		nextView := view(nextState)
+		patch := diff(currentView, nextView)
 
-	for op := range eff.req {
-		switch r := op.(type) {
-		case HttpGet:
-			handler := handlers[reflect.TypeOf(r)]
-			pretty.Println("Runtime: ", handler)
-			eff.res <- handler(r)
-			pretty.Println("Runtime: end handle")
-		}
+		currentView = nextView
 
+		applyPatch(root, patch, msgChan)
 	}
 }
-
-// for msg := range msgChan {
-// 	nextState, cmd := update(msg, currentState)
-// 	currentState = nextState
-
-// 	go handleCmd(cmd, msgChan)
-
-// 	nextView := view(nextState)
-// 	patch := diff(currentView, nextView)
-
-// 	currentView = nextView
-
-// 	applyPatch(root, patch, msgChan)
-// }

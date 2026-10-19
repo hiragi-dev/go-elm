@@ -144,7 +144,7 @@ func serveWeb(dir string) http.Handler {
 		} else {
 			html = append(html, reloadScript...)
 		}
-		w.Header().Set("Ctlent-Type", "text/html; charset=utf-8")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(html)
 	})
 }
@@ -152,7 +152,7 @@ func serveWeb(dir string) http.Handler {
 // noCache はブラウザに古い main.wasm を使わせないためのもの。
 func noCache(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Ctlrol", "no-store")
+		w.Header().Set("Cache-Control", "no-store")
 		h.ServeHTTP(w, r)
 	})
 }
@@ -188,8 +188,8 @@ func (h *hub) serveEvents(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Ctlent-Type", "text/event-stream")
-	w.Header().Set("Cache-Ctlrol", "no-store")
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-store")
 	flusher.Flush()
 
 	c := make(chan string, 4)
@@ -207,7 +207,7 @@ func (h *hub) serveEvents(w http.ResponseWriter, r *http.Request) {
 		case msg := <-c:
 			fmt.Fprint(w, msg)
 			flusher.Flush()
-		case <-r.Ctlext().Done():
+		case <-r.Context().Done():
 			return
 		}
 	}
