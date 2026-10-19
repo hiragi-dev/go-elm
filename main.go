@@ -1,7 +1,7 @@
 package main
 
 import (
-	"honnef.co/go/js/dom/v2"
+	"github.com/kr/pretty"
 )
 
 type UserMsg interface{ isUserMsg() }
@@ -18,13 +18,18 @@ type SetTimeNow struct{ time string }
 
 func (SetTimeNow) isUserMsg() {}
 
-type GetGitHubActivity struct{}
+type GetGitHubActivity struct{ response string }
 
 func (GetGitHubActivity) isUserMsg() {}
+
+type GotGitHubActivity struct{ response string }
+
+func (GotGitHubActivity) isUserMsg() {}
 
 type UserState struct {
 	counterValue int
 	time         string
+	commits      []string
 }
 
 func (h HTML[Msg]) Typ(content string) VDom[Msg] {
@@ -169,20 +174,32 @@ func (h HTML[Msg]) NavBar() VDom[Msg] {
 	)
 }
 
-func (h HTML[Msg]) Activity() VDom[Msg] {
+func (h HTML[Msg]) Activity(commits []string) VDom[Msg] {
+	commitsDisp := h.Div()
+	for _, commit := range commits {
+		commitsDisp.children = append(commitsDisp.children,
+			h.Typ(commit),
+		)
+	}
+
+	pretty.Println(commits)
+
 	return h.Content(
 		"ACTIVITY",
 		h.Div(
 			h.Class("card bg-base-100 shadow-lg"),
 			h.Div(
 				h.Class("card-body"),
-				h.Div(),
+				h.Div(
+					h.Class("flex flex-col"),
+					commitsDisp,
+				),
 			),
 		),
 	)
 }
 
-type Continue interface{ AndThen() }
+type Continue[M any] interface{ AndThen(M) Cmd[M] }
 
 func GET[M any](url string, headers ...string) HttpGet[M] {
 	_headers := make([]string, 0)
@@ -200,52 +217,124 @@ func (h HttpGet[M]) AndThen(c func(string) M) Cmd[M] {
 	return h
 }
 
+type Eff[T, Op any] struct {
+	op    chan Op
+	opRes chan any
+}
+
+func Handle[T, Op any](program func(*Eff[T, Op])) any {
+	eff := &Eff[T, Op]{op: make(chan Op), opRes: make(chan any)}
+
+	go func() {
+		pretty.Println("run program")
+		program(eff)
+	}()
+
+	println("wait")
+	for op := range eff.op {
+		pretty.Println("handle op: ", op)
+		eff.opRes <- "res"
+	}
+
+	return nil
+}
+
+func (eff *Eff[T, Op]) Perform(op any) any {
+	eff.op <- op.(Op)
+	res := <-eff.opRes
+
+	return res
+}
+
+// func Do(func (eff *Eff[T, Op]))
+
+func effectfull[T, Op any](eff *Eff[T, Op]) {
+	pretty.Println("effectfull: start")
+	res := eff.Perform("Operation")
+
+	pretty.Println("effectfull: ", res)
+}
+
 func main() {
-	h := HTML[UserMsg]{}
-	// ui := UI[UserMsg]{}
+	// h := HTML[UserMsg]{}
+	// // ui := UI[UserMsg]{}
 
-	view := func(state UserState) VDom[UserMsg] {
-		return h.Div(
-			h.Class("min-h-screen bg-base-200 antialiased"),
-			h.NavBar(),
-			h.Div(
-				h.Class("flex flex-col px-40 gap-y-10 mt-10"),
-				h.Profile(),
-				h.Activity(),
-				h.Works(),
-			),
-		)
-	}
+	// effectfull()
+	res := Handle[string, string](effectfull)
+	pretty.Println("handle: ", res)
 
-	update := func(msg UserMsg, state UserState) (UserState, Cmd[UserMsg]) {
-		switch m := msg.(type) {
+	// view := func(state UserState) VDom[UserMsg] {
+	// 	return h.Div(
+	// 		h.Class("min-h-screen bg-base-200 antialiased"),
+	// 		h.NavBar(),
+	// 		h.Div(
+	// 			h.Class("flex flex-col px-40 gap-y-10 mt-10"),
+	// 			h.Profile(),
+	// 			h.Activity(state.commits),
+	// 			h.Works(),
+	// 		),
+	// 	)
+	// }
 
-		case AddCounter:
-			return UserState{counterValue: state.counterValue + 1}, EmptyCmd{}
-		case GetTimeNow:
-			return state, HttpGet[UserMsg]{url: "https://jsonplaceholder.typicode.com/todos/1", onReceive: func(r string) UserMsg { return SetTimeNow{time: r} }}
-		case SetTimeNow:
-			time := m.time
-			return UserState{counterValue: state.counterValue, time: time}, EmptyCmd{}
-		default:
-			return UserState{counterValue: state.counterValue + 1}, EmptyCmd{}
-		}
-	}
+	// var update func(UserMsg, UserState) (UserState, Cmd[UserMsg])
 
-	root := dom.GetWindow().Document().QuerySelector("#app")
-	// root.SetAttribute("class", "h-screen")
+	// update = func(msg UserMsg, state UserState) (UserState, Cmd[UserMsg]) {
+	// 	switch m := msg.(type) {
 
-	init := func() (UserState, Cmd[UserMsg]) {
+	// 	case AddCounter:
+	// 		return UserState{counterValue: state.counterValue + 1}, EmptyCmd{}
+	// 	case GetTimeNow:
+	// 		return state, HttpGet[UserMsg]{url: "https://jsonplaceholder.typicode.com/todos/1", onReceive: func(r string) UserMsg { return SetTimeNow{time: r} }}
+	// 	case SetTimeNow:
+	// 		time := m.time
+	// 		return UserState{counterValue: state.counterValue, time: time}, EmptyCmd{}
+	// 	case GotGitHubActivity:
+	// 		var jsonMaps []map[string]any
+	// 		_ = json.Unmarshal([]byte(m.response), &jsonMaps)
 
-		// HttpGet{
-		// 	url: "https://api.github.com/repos/hiragi-dev/go-elm/commits"
-		// }
-		initCmd :=
-			GET[UserMsg]("https://api.github.com/repos/hiragi-dev/go-elm/commits").
-				AndThen(func(string) UserMsg { return GetGitHubActivity{} })
+	// 		var commits []string
 
-		return UserState{counterValue: 0}, initCmd
-	}
+	// 		for _, jsonMap := range jsonMaps {
+	// 			commitEntry, ok := jsonMap["commit"].(map[string]any)
+	// 			if !ok {
+	// 				println("ERROR:")
+	// 			}
+	// 			messageEntry, ok := commitEntry["message"].(string)
+	// 			if !ok {
+	// 				println("ERROR:")
+	// 			}
 
-	Launch(root, view, update, init)
+	// 			pretty.Println(commitEntry)
+
+	// 			commits = append(commits, messageEntry)
+	// 		}
+
+	// 		state.commits = commits
+
+	// 		return state, EmptyCmd{}
+	// 	default:
+	// 		return UserState{counterValue: state.counterValue + 1}, EmptyCmd{}
+	// 	}
+	// }
+
+	// root := dom.GetWindow().Document().QuerySelector("#app")
+	// // root.SetAttribute("class", "h-screen")
+
+	// init := func() (UserState, Cmd[UserMsg]) {
+
+	// 	// HttpGet{
+	// 	// 	url: "https://api.github.com/repos/hiragi-dev/go-elm/commits"
+	// 	// }
+	// 	initCmd :=
+	// 		GET[UserMsg](
+	// 			"https://api.github.com/repos/hiragi-dev/go-elm/commits",
+	// 			"Accept: application/vnd.github+json",
+	// 			"X-GitHub-Api-Version: 2026-03-10",
+	// 		).
+	// 			AndThen(func(r string) UserMsg { return GotGitHubActivity{r} })
+
+	// 	return UserState{counterValue: 0, commits: make([]string, 0)}, initCmd
+	// }
+
+	// Launch(root, view, update, init)
 }
