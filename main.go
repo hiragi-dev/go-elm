@@ -1,45 +1,30 @@
 package main
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/kr/pretty"
+	"github.com/mono83/maybe"
+	"honnef.co/go/js/dom/v2"
 )
 
 type UserMsg interface{ isUserMsg() }
 
-type AddCounter struct{}
-
-func (AddCounter) isUserMsg() {}
-
-type GetTimeNow struct{}
-
-func (GetTimeNow) isUserMsg() {}
-
-type SetTimeNow struct{ time string }
-
-func (SetTimeNow) isUserMsg() {}
-
-type GetGitHubActivity struct{ response string }
-
-func (GetGitHubActivity) isUserMsg() {}
-
-type GotGitHubActivity struct{ response string }
-
-func (GotGitHubActivity) isUserMsg() {}
-
-type UserState struct {
-	counterValue int
-	time         string
-	commits      []string
+type SetGitHubActivity struct {
+	commits []GithubCommit
 }
 
-func (h HTML[Msg]) Typ(content string) VDom[Msg] {
+func (SetGitHubActivity) isUserMsg() {}
+
+func (h HTML[Msg]) Typ(content string) VNode[Msg] {
 	return h.P(
 		h.Text(content),
 		h.Class("opacity-60 text-xs"),
 	)
 }
 
-func (h HTML[Msg]) Link(content string, url string) VDom[Msg] {
+func (h HTML[Msg]) Link(content string, url string) VNode[Msg] {
 	return h.A(
 		h.Class("link link-hover text-md font-semibold tracking-tight text-violet-600"),
 		h.Text(
@@ -48,8 +33,8 @@ func (h HTML[Msg]) Link(content string, url string) VDom[Msg] {
 	)
 }
 
-func (h HTML[M]) Profile() VDom[M] {
-	tableEntry := func(key string, value string) VDom[M] {
+func (h HTML[M]) Profile() VNode[M] {
+	tableEntry := func(key string, value string) VNode[M] {
 		return h.Tr(
 			h.Th(
 				h.Class("px-0"),
@@ -102,7 +87,7 @@ func (h HTML[M]) Profile() VDom[M] {
 	)
 }
 
-func (h HTML[M]) Content(header string, inner VDom[M]) VDom[M] {
+func (h HTML[M]) Content(header string, inner VNode[M]) VNode[M] {
 	return h.Div(
 		h.Hn(2,
 			h.Text(header),
@@ -112,8 +97,8 @@ func (h HTML[M]) Content(header string, inner VDom[M]) VDom[M] {
 	)
 }
 
-func (h HTML[M]) Works() VDom[M] {
-	listRow := func(header VDom[M], title string, description string, link string) VDom[M] {
+func (h HTML[M]) Works() VNode[M] {
+	listRow := func(header VNode[M], title string, description string, link string) VNode[M] {
 		return h.Li(
 			h.Class("list-row transition-colors duration-200 hover:bg-base-300 "),
 			header,
@@ -158,7 +143,7 @@ func (h HTML[M]) Works() VDom[M] {
 	)
 }
 
-func (h HTML[Msg]) NavBar() VDom[Msg] {
+func (h HTML[Msg]) NavBar() VNode[Msg] {
 	return h.Div(
 		h.Class("navbar bg-base-100 shadow-sm px-40"),
 		h.Div(
@@ -174,15 +159,65 @@ func (h HTML[Msg]) NavBar() VDom[Msg] {
 	)
 }
 
-func (h HTML[Msg]) Activity(commits []string) VDom[Msg] {
-	commitsDisp := h.Div()
-	for _, commit := range commits {
-		commitsDisp.children = append(commitsDisp.children,
-			h.Typ(commit),
+func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VNode[Msg] {
+	type ColorAttr string
+
+	tableEntry := func(key string, repoName string, value string, colorAttr ColorAttr) VNode[Msg] {
+		return h.Tr(
+			h.Th(
+				h.Class("px-0"),
+				h.Text(key),
+			),
+			h.Td(
+				h.Div(
+					h.Class(fmt.Sprintf("badge badge-soft badge-%s", colorAttr)),
+					h.Text(repoName),
+				),
+			),
+			h.Td(
+				h.Text(value),
+			),
 		)
 	}
 
-	pretty.Println(commits)
+	var activities VNode[Msg]
+	if commits, ok := commits.Get(); ok {
+
+		// リポジトリごとに表示色を分ける
+		repos := make(map[string]ColorAttr)
+		colorAttrs := []ColorAttr{"primary", "secondary", "accent", "info", "success", "warning", "error"}
+		acc := 0
+		for _, commit := range commits {
+			if _, ok := repos[commit.repoName]; ok {
+				continue
+			} else {
+				repos[commit.repoName] = colorAttrs[acc%len(colorAttrs)]
+				acc++
+			}
+		}
+
+		activities = h.Tbody()
+		for i, commit := range commits {
+			// 表示するコミットは最大7件
+			if i >= 7 {
+				break
+			}
+
+			activities.children = append(activities.children,
+				tableEntry(
+					commit.date.Format("2006/1/2 15:04"),
+					commit.repoName,
+					commit.message,
+					repos[commit.repoName],
+				),
+			)
+
+		}
+	} else {
+		activities = h.Span(
+			h.Class("loading loading-spinner loading-md text-violet-600"),
+		)
+	}
 
 	return h.Content(
 		"ACTIVITY",
@@ -191,150 +226,139 @@ func (h HTML[Msg]) Activity(commits []string) VDom[Msg] {
 			h.Div(
 				h.Class("card-body"),
 				h.Div(
-					h.Class("flex flex-col"),
-					commitsDisp,
+					h.Class("flex"),
+					h.Div(
+						h.Class("ml-8 flex flex-col w-full"),
+						h.Table(
+							h.Class("table"),
+							h.Thead(
+								h.Tr(
+									h.Th(h.Text("Time")),
+									h.Th(h.Text("Repository")),
+									h.Th(h.Text("commit message")),
+								),
+							),
+							activities,
+						),
+					),
 				),
 			),
 		),
 	)
+
 }
 
-type Continue[M any] interface{ AndThen(M) Cmd[M] }
+func (h HTML[Msg]) UserFooter() VNode[Msg] {
+	return h.Footer(
+		h.Class("footer bg-neutral text-neutral-content p-10"),
+		// h.Nav
+	)
+}
 
-func GET[M any](url string, headers ...string) HttpGet[M] {
-	_headers := make([]string, 0)
-	_headers = append(_headers, headers...)
+type UserState struct {
+	counterValue int
+	time         string
+	commits      maybe.Maybe[[]GithubCommit]
+}
 
-	return HttpGet[M]{
-		url: url,
-		// onReceive: onReceive,
-		headers: _headers,
+type GithubCommit struct {
+	date     time.Time
+	message  string
+	repoName string
+}
+
+// maybe
+
+type GitHubInfo interface {
+	GetActivity(Http) []GithubCommit
+}
+
+type githubInfo struct {
+}
+
+func (r githubInfo) GetActivity(e Http) []GithubCommit {
+	return GetGitHubActivity(e)
+
+}
+
+type githubInfoMock struct {
+}
+
+func (r githubInfoMock) GetActivity(e Http) []GithubCommit {
+	time.Sleep(time.Second * 1)
+
+	now := time.Now()
+	return []GithubCommit{
+		{date: now.Add(-25 * time.Minute), message: "impl keyed diff for list children", repoName: "go-elm"},
+		{date: now.Add(-3 * time.Hour), message: "support SSH_MSG_CHANNEL_REQUEST exec (RFC 4254 §6.5)", repoName: "ssh-server"},
+		{date: now.Add(-26 * time.Hour), message: "docs: add wiring diagram for M5Stack GPS module", repoName: "onealarm-doc"},
+		{date: now.Add(-2 * 24 * time.Hour), message: "read GPS fix and compare with registered location", repoName: "onealarm-firmware"},
+		{date: now.Add(-4 * 24 * time.Hour), message: "add layout for 40% ortholinear with rotary encoder", repoName: "keyboard-layout"},
+		{date: now.Add(-9 * 24 * time.Hour), message: "chapter 3: effect handlers and one-shot continuations", repoName: "notes"},
+		{date: now.Add(-20 * 24 * time.Hour), message: "initial commit", repoName: "dotfiles"},
 	}
 }
 
-func (h HttpGet[M]) AndThen(c func(string) M) Cmd[M] {
-	h.onReceive = c
-	return h
+type UserEff interface {
+	Std
+	GitHubInfo
 }
 
-type Eff[T, Op any] struct {
-	op    chan Op
-	opRes chan any
+type UserEffSt struct {
+	Std
+	githubInfoMock
 }
 
-func Handle[T, Op any](program func(*Eff[T, Op])) any {
-	eff := &Eff[T, Op]{op: make(chan Op), opRes: make(chan any)}
-
-	go func() {
-		pretty.Println("run program")
-		program(eff)
-	}()
-
-	println("wait")
-	for op := range eff.op {
-		pretty.Println("handle op: ", op)
-		eff.opRes <- "res"
-	}
-
-	return nil
-}
-
-func (eff *Eff[T, Op]) Perform(op any) any {
-	eff.op <- op.(Op)
-	res := <-eff.opRes
-
-	return res
-}
-
-// func Do(func (eff *Eff[T, Op]))
-
-func effectfull[T, Op any](eff *Eff[T, Op]) {
-	pretty.Println("effectfull: start")
-	res := eff.Perform("Operation")
-
-	pretty.Println("effectfull: ", res)
+func DefaultUserEff(std Std) UserEff {
+	return UserEffSt{std, githubInfoMock{}}
 }
 
 func main() {
-	// h := HTML[UserMsg]{}
-	// // ui := UI[UserMsg]{}
+	h := HTML[UserMsg]{}
 
-	// effectfull()
-	res := Handle[string, string](effectfull)
-	pretty.Println("handle: ", res)
+	view := func(state UserState) VNode[UserMsg] {
+		return h.Div(
+			h.Class("min-h-screen bg-base-200 antialiased"),
+			h.NavBar(),
+			h.Div(
+				h.Class("flex flex-col px-40 gap-y-10 mt-10"),
+				h.Profile(),
+				h.Activity(state.commits),
+				h.Works(),
+			),
+		)
+	}
 
-	// view := func(state UserState) VDom[UserMsg] {
-	// 	return h.Div(
-	// 		h.Class("min-h-screen bg-base-200 antialiased"),
-	// 		h.NavBar(),
-	// 		h.Div(
-	// 			h.Class("flex flex-col px-40 gap-y-10 mt-10"),
-	// 			h.Profile(),
-	// 			h.Activity(state.commits),
-	// 			h.Works(),
-	// 		),
-	// 	)
-	// }
+	update := func(msg UserMsg, state UserState) (UserState, Cmd[UserEff, UserMsg]) {
+		switch m := msg.(type) {
+		case SetGitHubActivity:
+			state.commits = maybe.Just(m.commits)
+		default:
+			// pretty.Println("update: receive ", m)
+		}
 
-	// var update func(UserMsg, UserState) (UserState, Cmd[UserMsg])
+		return state, None[UserEff, UserMsg]()
+	}
 
-	// update = func(msg UserMsg, state UserState) (UserState, Cmd[UserMsg]) {
-	// 	switch m := msg.(type) {
+	init := func() (UserState, Cmd[UserEff, UserMsg]) {
+		initAction := AsyncDo(func(e UserEff) UserMsg {
+			commits := e.GetActivity(e)
+			// commits := []GithubCommit{{message: "test", repoName: "reporepo"}}
+			pretty.Println(commits)
+			// return SetGitHubActivity{commits: commits}
+			return SetGitHubActivity{commits}
+		})
 
-	// 	case AddCounter:
-	// 		return UserState{counterValue: state.counterValue + 1}, EmptyCmd{}
-	// 	case GetTimeNow:
-	// 		return state, HttpGet[UserMsg]{url: "https://jsonplaceholder.typicode.com/todos/1", onReceive: func(r string) UserMsg { return SetTimeNow{time: r} }}
-	// 	case SetTimeNow:
-	// 		time := m.time
-	// 		return UserState{counterValue: state.counterValue, time: time}, EmptyCmd{}
-	// 	case GotGitHubActivity:
-	// 		var jsonMaps []map[string]any
-	// 		_ = json.Unmarshal([]byte(m.response), &jsonMaps)
+		return UserState{commits: maybe.Nothing[[]GithubCommit]()}, initAction
+	}
 
-	// 		var commits []string
+	root := dom.GetWindow().Document().QuerySelector("#app")
 
-	// 		for _, jsonMap := range jsonMaps {
-	// 			commitEntry, ok := jsonMap["commit"].(map[string]any)
-	// 			if !ok {
-	// 				println("ERROR:")
-	// 			}
-	// 			messageEntry, ok := commitEntry["message"].(string)
-	// 			if !ok {
-	// 				println("ERROR:")
-	// 			}
-
-	// 			pretty.Println(commitEntry)
-
-	// 			commits = append(commits, messageEntry)
-	// 		}
-
-	// 		state.commits = commits
-
-	// 		return state, EmptyCmd{}
-	// 	default:
-	// 		return UserState{counterValue: state.counterValue + 1}, EmptyCmd{}
-	// 	}
-	// }
-
-	// root := dom.GetWindow().Document().QuerySelector("#app")
-	// // root.SetAttribute("class", "h-screen")
-
-	// init := func() (UserState, Cmd[UserMsg]) {
-
-	// 	// HttpGet{
-	// 	// 	url: "https://api.github.com/repos/hiragi-dev/go-elm/commits"
-	// 	// }
-	// 	initCmd :=
-	// 		GET[UserMsg](
-	// 			"https://api.github.com/repos/hiragi-dev/go-elm/commits",
-	// 			"Accept: application/vnd.github+json",
-	// 			"X-GitHub-Api-Version: 2026-03-10",
-	// 		).
-	// 			AndThen(func(r string) UserMsg { return GotGitHubActivity{r} })
-
-	// 	return UserState{counterValue: 0, commits: make([]string, 0)}, initCmd
-	// }
-
-	// Launch(root, view, update, init)
+	Launch(
+		root,
+		view,
+		update,
+		func(std Std) UserEff { return DefaultUserEff(std) },
+		init,
+	)
 }

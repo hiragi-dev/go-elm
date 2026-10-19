@@ -8,31 +8,31 @@ import (
 
 type Patch[M any] struct {
 	path     []int
-	newValue VDom[M]
+	newValue VNode[M]
 }
 
-func diff[M any](oldVDom VDom[M], newVDom VDom[M]) []Patch[M] {
+func diff[M any](oldVNode VNode[M], newVNode VNode[M]) []Patch[M] {
 	out := make([]Patch[M], 0)
-	_diff(oldVDom, newVDom, make([]int, 1), &out)
+	_diff(oldVNode, newVNode, make([]int, 1), &out)
 
 	return out
 }
 
-func _diff[M any](oldVDom VDom[M], newVDom VDom[M], path []int, out *[]Patch[M]) {
-	if oldVDom.tagName != newVDom.tagName || len(oldVDom.children) != len(newVDom.children) {
-		*out = append(*out, Patch[M]{path: path, newValue: newVDom})
+func _diff[M any](oldVNode VNode[M], newVNode VNode[M], path []int, out *[]Patch[M]) {
+	if oldVNode.tagName != newVNode.tagName || len(oldVNode.children) != len(newVNode.children) {
+		*out = append(*out, Patch[M]{path: path, newValue: newVNode})
 		return
 	}
 
-	if oldVDom.text != newVDom.text {
-		*out = append(*out, Patch[M]{path: path, newValue: newVDom})
+	if oldVNode.text != newVNode.text {
+		*out = append(*out, Patch[M]{path: path, newValue: newVNode})
 		return
 	}
 
-	for i := range oldVDom.children {
+	for i := range oldVNode.children {
 		childPath := append(slices.Clone(path), i)
 
-		_diff(oldVDom.children[i], newVDom.children[i], childPath, out)
+		_diff(oldVNode.children[i], newVNode.children[i], childPath, out)
 	}
 }
 

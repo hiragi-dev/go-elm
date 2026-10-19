@@ -7,19 +7,19 @@ import (
 	"honnef.co/go/js/dom/v2"
 )
 
-type HttpGet[Msg any] struct {
-	onReceive func(string) Msg
-	url       string
-	headers   []string
+type Cmd[Env any, M any] func(r Env, send func(M))
+
+func AsyncDo[Env, M any](f func(e Env) M) Cmd[Env, M] {
+	return func(r Env, send func(M)) {
+		send(f(r))
+	}
 }
 
-func (HttpGet[Msg]) isCmd() {}
+func None[Env, M any]() Cmd[Env, M] {
+	return func(_ Env, _ func(M)) {
 
-type Cmd[Msg any] interface{ isCmd() }
-
-type EmptyCmd struct{}
-
-func (EmptyCmd) isCmd() {}
+	}
+}
 
 func render(root dom.Element, dom dom.Node) {
 	clear(root)
@@ -39,18 +39,7 @@ func fetchUrl(url string) string {
 	return string(body)
 }
 
-func handleCmd[Msg any](cmd Cmd[Msg], msgChan chan Msg) {
-	switch c := cmd.(type) {
-	case HttpGet[Msg]:
-		go func() {
-			r := fetchUrl(c.url)
-			m := c.onReceive(r)
-			msgChan <- m
-		}()
-	}
-}
-
-func createElement[Msg any](v VDom[Msg], msgChan chan Msg) dom.Node {
+func createElement[Msg any](v VNode[Msg], msgChan chan Msg) dom.Node {
 	doc := dom.GetWindow().Document()
 
 	if v.text == "" {
@@ -83,22 +72,29 @@ func createElement[Msg any](v VDom[Msg], msgChan chan Msg) dom.Node {
 	}
 }
 
-func Launch[State any, Msg any](root dom.Element, view func(State) VDom[Msg], update func(Msg, State) (State, Cmd[Msg]), init func() (State, Cmd[Msg])) {
+func Launch[State any, Msg any, E any](
+	root dom.Element,
+	view func(State) VNode[Msg],
+	update func(Msg, State) (State, Cmd[E, Msg]),
+	makeEnv func(Std) E,
+	init func() (State, Cmd[E, Msg]),
+) {
 	msgChan := make(chan Msg)
 	currentState, initCmd := init()
-
-	go handleCmd(initCmd, msgChan)
 
 	// メッセージが届く前の初回描画
 	currentView := view(currentState)
 	dom := createElement(currentView, msgChan)
 	render(root, dom)
 
+	env := makeEnv(DefaultStd())
+
+	go initCmd(env, func(m Msg) { msgChan <- m })
+
 	for msg := range msgChan {
 		nextState, cmd := update(msg, currentState)
-		currentState = nextState
 
-		go handleCmd(cmd, msgChan)
+		go cmd(env, func(m Msg) { msgChan <- m })
 
 		nextView := view(nextState)
 		patch := diff(currentView, nextView)
