@@ -160,13 +160,7 @@ func (h HTML[Msg]) NavBar() VDom[Msg] {
 }
 
 func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
-	// commitsDisp := h.Div()
-	// for _, commit := range commits {
-	// 	commitsDisp.children = append(commitsDisp.children,
-	// 		h.Typ(commit),
-	// 	)
 	type ColorAttr string
-	// }
 
 	tableEntry := func(key string, repoName string, value string, colorAttr ColorAttr) VDom[Msg] {
 		return h.Tr(
@@ -204,18 +198,20 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
 
 		activities = h.Tbody()
 		for i, commit := range commits {
-			if i < 7 {
-				activities.children = append(activities.children,
-					tableEntry(
-						commit.date.Format("2006/1/2 15:04"),
-						commit.repoName,
-						commit.message,
-						repos[commit.repoName],
-					),
-				)
-			} else {
+			// 表示するコミットは最大7件
+			if i >= 7 {
 				break
 			}
+
+			activities.children = append(activities.children,
+				tableEntry(
+					commit.date.Format("2006/1/2 15:04"),
+					commit.repoName,
+					commit.message,
+					repos[commit.repoName],
+				),
+			)
+
 		}
 	} else {
 		activities = h.Span(
@@ -233,13 +229,6 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
 					h.Class("flex"),
 					h.Div(
 						h.Class("ml-8 flex flex-col w-full"),
-						// h.Hn(
-						// 	2,
-						// 	h.P(h.Text("Commits History")),
-						// 	h.Class("text-3xl font-semibold text-gray-900"),
-						// ),
-						// h.Div(h.Class("my-1")),
-
 						h.Table(
 							h.Class("table"),
 							h.Thead(
@@ -249,7 +238,6 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
 									h.Th(h.Text("commit message")),
 								),
 							),
-
 							activities,
 						),
 					),
@@ -258,6 +246,13 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
 		),
 	)
 
+}
+
+func (h HTML[Msg]) UserFooter() VDom[Msg] {
+	return h.Footer(
+		h.Class("footer bg-neutral text-neutral-content p-10"),
+		// h.Nav
+	)
 }
 
 type UserState struct {
@@ -292,7 +287,6 @@ type githubInfoMock struct {
 func (r githubInfoMock) GetActivity(e Http) []GithubCommit {
 	time.Sleep(time.Second * 1)
 
-	// 表示確認用のダミーデータ。リポジトリは全件異なる名前にして、badge の7色が1つずつ当たるようにしている
 	now := time.Now()
 	return []GithubCommit{
 		{date: now.Add(-25 * time.Minute), message: "impl keyed diff for list children", repoName: "go-elm"},

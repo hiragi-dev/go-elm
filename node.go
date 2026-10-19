@@ -1,6 +1,8 @@
 package main
 
-import "strconv"
+import (
+	"strconv"
+)
 
 type Applier[M any] interface{ apply(*VDom[M]) }
 
@@ -48,205 +50,71 @@ type HTML[Msg any] struct {
 }
 
 func (h HTML[Msg]) Div(applier ...Applier[Msg]) VDom[Msg] {
-	event := make(map[string]func() Msg)
-	children := make([]VDom[Msg], 0)
-	attributes := make([]Attribute[Msg], 0)
-
-	el := VDom[Msg]{tagName: "div", children: children, attributes: attributes, event: event}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("div").Apply(applier...)
 }
 
 func (h HTML[Msg]) P(content VDom[Msg], applier ...Applier[Msg]) VDom[Msg] {
-	children := make([]VDom[Msg], 0)
-	children = append(children, content)
-
-	el := VDom[Msg]{tagName: "p", children: children}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("p").Apply(content).Apply(applier...)
 }
 
 func (h HTML[Msg]) Ul(applier ...Applier[Msg]) VDom[Msg] {
-	children := make([]VDom[Msg], 0)
-
-	el := VDom[Msg]{tagName: "ul", children: children}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("ul").Apply(applier...)
 }
 
 func (h HTML[Msg]) Li(applier ...Applier[Msg]) VDom[Msg] {
-	children := make([]VDom[Msg], 0)
-
-	el := VDom[Msg]{tagName: "li", children: children}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("li").Apply(applier...)
 }
 
 func (h HTML[Msg]) Hn(n uint, applier ...Applier[Msg]) VDom[Msg] {
-	children := make([]VDom[Msg], 0)
-
-	el := VDom[Msg]{tagName: "h" + strconv.Itoa(int(n)), children: children}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("h" + strconv.Itoa(int(n))).Apply(applier...)
 }
 
 func (h HTML[Msg]) A(applier ...Applier[Msg]) VDom[Msg] {
-	children := make([]VDom[Msg], 0)
-
-	el := VDom[Msg]{tagName: "a", children: children}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("a").Apply(applier...)
 }
 
 func (h HTML[Msg]) Table(applier ...Applier[Msg]) VDom[Msg] {
-	children := make([]VDom[Msg], 0)
-
-	el := VDom[Msg]{tagName: "table", children: children}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("table").Apply(applier...)
 }
 
 func (h HTML[Msg]) Thead(applier ...Applier[Msg]) VDom[Msg] {
-	children := make([]VDom[Msg], 0)
-
-	el := VDom[Msg]{tagName: "thead", children: children}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("thead").Apply(applier...)
 }
 
 func (h HTML[Msg]) Tbody(applier ...Applier[Msg]) VDom[Msg] {
-	children := make([]VDom[Msg], 0)
-
-	el := VDom[Msg]{tagName: "tbody", children: children}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("tbody").Apply(applier...)
 }
 
 func (h HTML[Msg]) Tr(applier ...Applier[Msg]) VDom[Msg] {
-	children := make([]VDom[Msg], 0)
-
-	el := VDom[Msg]{tagName: "tr", children: children}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("tr").Apply(applier...)
 }
 
 func (h HTML[Msg]) Th(applier ...Applier[Msg]) VDom[Msg] {
-	children := make([]VDom[Msg], 0)
-
-	el := VDom[Msg]{tagName: "th", children: children}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("th").Apply(applier...)
 }
 
 func (h HTML[Msg]) Td(applier ...Applier[Msg]) VDom[Msg] {
-	children := make([]VDom[Msg], 0)
-
-	el := VDom[Msg]{tagName: "td", children: children}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("td").Apply(applier...)
 }
 
 func (h HTML[Msg]) Span(applier ...Applier[Msg]) VDom[Msg] {
-	el := VDom[Msg]{tagName: "span"}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("span").Apply(applier...)
 }
 
 func (h HTML[Msg]) Text(content string, applier ...Applier[Msg]) VDom[Msg] {
-	el := VDom[Msg]{text: content}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateTextNode[Msg](content).Apply(applier...)
 }
 
 func (h HTML[Msg]) Button(applier ...Applier[Msg]) VDom[Msg] {
-	event := make(map[string]func() Msg)
-	children := make([]VDom[Msg], 0)
-	attributes := make([]Attribute[Msg], 0)
-
-	vdom := VDom[Msg]{tagName: "button", children: children, attributes: attributes, event: event}
-
-	for _, a := range applier {
-		a.apply(&vdom)
-	}
-
-	return vdom
+	return *CreateVNode[Msg]("button").Apply(applier...)
 }
 
 func (h HTML[Msg]) Img(srcUrl string) VDom[Msg] {
-	srcAttr := h.Attr("src", srcUrl)
-
-	attributes := make([]Attribute[Msg], 0)
-	attributes = append(attributes, srcAttr)
-
-	vdom := VDom[Msg]{tagName: "img", attributes: attributes}
-
-	return vdom
+	return *CreateVNode[Msg]("img").SetAttribute("src", srcUrl)
 }
 
 func (h HTML[Msg]) Footer(applier ...Applier[Msg]) VDom[Msg] {
-	el := VDom[Msg]{tagName: "footer"}
-
-	for _, a := range applier {
-		a.apply(&el)
-	}
-
-	return el
+	return *CreateVNode[Msg]("footer").Apply(applier...)
 }
 
 func (h HTML[Msg]) Attr(key string, value string) Attribute[Msg] {
@@ -255,4 +123,35 @@ func (h HTML[Msg]) Attr(key string, value string) Attribute[Msg] {
 
 func (h HTML[Msg]) Class(value string) Attribute[Msg] {
 	return h.Attr("class", value)
+}
+
+func CreateVNode[M any](tagName string) *VDom[M] {
+	return &VDom[M]{
+		tagName:    tagName,
+		children:   make([]VDom[M], 0),
+		event:      map[string]func() M{},
+		attributes: make([]Attribute[M], 0),
+		text:       "",
+	}
+}
+
+// CreateTextNode はテキストノードを作る。tagName が空で text を持つノードがテキストノード
+func CreateTextNode[M any](content string) *VDom[M] {
+	el := CreateVNode[M]("")
+	el.text = content
+	return el
+}
+
+func (vnode *VDom[M]) SetAttribute(key string, value string) *VDom[M] {
+	vnode.attributes = append(vnode.attributes, Attribute[M]{key, value})
+
+	return vnode
+}
+
+func (vnode *VDom[M]) Apply(applier ...Applier[M]) *VDom[M] {
+	for _, a := range applier {
+		a.apply(vnode)
+	}
+
+	return vnode
 }
