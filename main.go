@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"github.com/kr/pretty"
 	"github.com/mono83/maybe"
 	"honnef.co/go/js/dom/v2"
 )
@@ -256,6 +257,41 @@ type GithubCommit struct {
 
 // maybe
 
+type GitHubInfo interface {
+	GetActivity(Http) []GithubCommit
+}
+
+type githubInfo struct {
+}
+
+func (r githubInfo) GetActivity(e Http) []GithubCommit {
+	return GetGitHubActivity(e)
+
+}
+
+type githubInfoMock struct {
+}
+
+func (r githubInfoMock) GetActivity(e Http) []GithubCommit {
+	time.Sleep(time.Second * 1)
+
+	return []GithubCommit{{message: "test", repoName: "reporepo"}, {message: "test", repoName: "reporepo"}}
+}
+
+type UserEff interface {
+	Std
+	GitHubInfo
+}
+
+type UserEffSt struct {
+	Std
+	githubInfoMock
+}
+
+func DefaultUserEff(std Std) UserEff {
+	return UserEffSt{std, githubInfoMock{}}
+}
+
 func main() {
 	h := HTML[UserMsg]{}
 
@@ -272,7 +308,7 @@ func main() {
 		)
 	}
 
-	update := func(msg UserMsg, state UserState) (UserState, Cmd[Std, UserMsg]) {
+	update := func(msg UserMsg, state UserState) (UserState, Cmd[UserEff, UserMsg]) {
 		switch m := msg.(type) {
 		case SetGitHubActivity:
 			state.commits = maybe.Just(m.commits)
@@ -280,11 +316,18 @@ func main() {
 			// pretty.Println("update: receive ", m)
 		}
 
-		return state, None[Std, UserMsg]()
+		return state, None[UserEff, UserMsg]()
 	}
 
-	init := func() (UserState, Cmd[Std, UserMsg]) {
-		initAction := GetGitHubActivity[Std]()
+	init := func() (UserState, Cmd[UserEff, UserMsg]) {
+		initAction := AsyncDo(func(e UserEff) UserMsg {
+			commits := e.GetActivity(e)
+			// commits := []GithubCommit{{message: "test", repoName: "reporepo"}}
+			pretty.Println(commits)
+			// return SetGitHubActivity{commits: commits}
+			return SetGitHubActivity{commits}
+		})
+
 		return UserState{commits: maybe.Nothing[[]GithubCommit]()}, initAction
 	}
 
@@ -294,7 +337,7 @@ func main() {
 		root,
 		view,
 		update,
-		func(std Std) Std { return DefaultStd() },
+		func(std Std) UserEff { return DefaultUserEff(std) },
 		init,
 	)
 }

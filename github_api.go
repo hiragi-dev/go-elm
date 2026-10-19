@@ -88,31 +88,32 @@ func getGitHubActivity(r Http, repoName string) []GithubCommit {
 	return commits
 }
 
-func GetGitHubActivity[E Http]() Cmd[E, UserMsg] {
-	return AsyncDo(func(r E) UserMsg {
-		repos := listRepositoryForAUser(r)
+func GetGitHubActivity[E Http](r E) []GithubCommit {
+	// Cmd[E, UserMsg] {
+	// return AsyncDo(func(r E) UserMsg {
+	repos := listRepositoryForAUser(r)
 
-		var commits []GithubCommit
+	var commits []GithubCommit
 
-		for i, repo := range repos {
-			if i < 7 {
-				commits = append(commits, getGitHubActivity(r, repo.name)...)
-				// pretty.Println(i, commits)
-			}
+	for i, repo := range repos {
+		if i < 7 {
+			commits = append(commits, getGitHubActivity(r, repo.name)...)
+			// pretty.Println(i, commits)
 		}
+	}
 
-		slices.SortFunc(commits, func(a GithubCommit, b GithubCommit) int {
-			if a.date.After(b.date) {
-				return -1
-			} else if b.date.After(a.date) {
-				return 1
-			} else {
-				return 0
-			}
-		})
-
-		pretty.Println(commits)
-
-		return SetGitHubActivity{commits}
+	slices.SortFunc(commits, func(a GithubCommit, b GithubCommit) int {
+		if a.date.After(b.date) {
+			return -1
+		} else if b.date.After(a.date) {
+			return 1
+		} else {
+			return 0
+		}
 	})
+
+	pretty.Println(commits)
+
+	return commits
+	// })
 }
