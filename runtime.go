@@ -3,17 +3,19 @@ package main
 import (
 	"io"
 	"net/http"
+	"reflect"
 
+	"github.com/kr/pretty"
 	"honnef.co/go/js/dom/v2"
 )
 
-type HttpGet[Msg any] struct {
-	onReceive func(string) Msg
-	url       string
-	headers   []string
-}
+// type HttpGet[Msg any] struct {
+// 	onReceive func(string) Msg
+// 	url       string
+// 	headers   []string
+// }
 
-func (HttpGet[Msg]) isCmd() {}
+// func (HttpGet[Msg]) isCmd() {}
 
 type Cmd[Msg any] interface{ isCmd() }
 
@@ -39,16 +41,16 @@ func fetchUrl(url string) string {
 	return string(body)
 }
 
-func handleCmd[Msg any](cmd Cmd[Msg], msgChan chan Msg) {
-	switch c := cmd.(type) {
-	case HttpGet[Msg]:
-		go func() {
-			r := fetchUrl(c.url)
-			m := c.onReceive(r)
-			msgChan <- m
-		}()
-	}
-}
+// func handleCmd[Msg any](cmd Cmd[Msg], msgChan chan Msg) {
+// 	switch c := cmd.(type) {
+// 	case HttpGet[Msg]:
+// 		go func() {
+// 			r := fetchUrl(c.url)
+// 			m := c.onReceive(r)
+// 			msgChan <- m
+// 		}()
+// 	}
+// }
 
 func createElement[Msg any](v VDom[Msg], msgChan chan Msg) dom.Node {
 	doc := dom.GetWindow().Document()
@@ -83,28 +85,60 @@ func createElement[Msg any](v VDom[Msg], msgChan chan Msg) dom.Node {
 	}
 }
 
-func Launch[State any, Msg any](root dom.Element, view func(State) VDom[Msg], update func(Msg, State) (State, Cmd[Msg]), init func() (State, Cmd[Msg])) {
-	msgChan := make(chan Msg)
-	currentState, initCmd := init()
+func Launch[State any, Msg any](
+	root dom.Element,
+	view func(State) VDom[Msg],
+	update func(*Eff, Msg, State) State,
+	init func(*Eff) State,
+) {
 
-	go handleCmd(initCmd, msgChan)
+	eff := &Eff{req: make(chan Op[any]), res: make(chan any)}
+
+	msgChan := make(chan Msg)
+	currentState := init(eff)
 
 	// メッセージが届く前の初回描画
 	currentView := view(currentState)
 	dom := createElement(currentView, msgChan)
 	render(root, dom)
 
-	for msg := range msgChan {
-		nextState, cmd := update(msg, currentState)
-		currentState = nextState
+	go func() {
+		for msg := range msgChan {
+			nextState := update(eff, msg, currentState)
 
-		go handleCmd(cmd, msgChan)
+			nextView := view(nextState)
+			patch := diff(currentView, nextView)
 
-		nextView := view(nextState)
-		patch := diff(currentView, nextView)
+			currentView = nextView
 
-		currentView = nextView
+			applyPatch(root, patch, msgChan)
+		}
+	}()
 
-		applyPatch(root, patch, msgChan)
+	handlers := SystemHandler()
+
+	for op := range eff.req {
+		switch r := op.(type) {
+		case HttpGet:
+			handler := handlers[reflect.TypeOf(r)]
+			pretty.Println("Runtime: ", handler)
+			eff.res <- handler(r)
+			pretty.Println("Runtime: end handle")
+		}
+
 	}
 }
+
+// for msg := range msgChan {
+// 	nextState, cmd := update(msg, currentState)
+// 	currentState = nextState
+
+// 	go handleCmd(cmd, msgChan)
+
+// 	nextView := view(nextState)
+// 	patch := diff(currentView, nextView)
+
+// 	currentView = nextView
+
+// 	applyPatch(root, patch, msgChan)
+// }

@@ -1,0 +1,2 @@
+- viewの中でeffectをperformすることもできるが、viewはstateのmapとmsgのperformのみに閉じていて、実際の処理はupdateに集約されているべき
+- updateの中でeffectを扱える利点として想定しているのは、複数のcmdからなる操作をflatに記述できること
