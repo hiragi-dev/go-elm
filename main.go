@@ -172,7 +172,10 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VDom[Msg] {
 				h.Text(key),
 			),
 			h.Td(
-				h.Text(repoName),
+				h.Div(
+					h.Class("badge badge-soft badge-primary"),
+					h.Text(repoName),
+				),
 			),
 			h.Td(
 				h.Text(value),
