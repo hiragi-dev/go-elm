@@ -87,7 +87,7 @@ func Launch[State any, Msg any, E any](
 	view func(State) VNode[Msg],
 	update func(Msg, State) (State, Cmd[E, Msg]),
 	makeEnv func(Std) E,
-	init func() (State, Cmd[E, Msg]),
+	init func() (State, []Cmd[E, Msg]),
 ) {
 	msgChan := make(chan Msg)
 	currentState, initCmd := init()
@@ -97,9 +97,11 @@ func Launch[State any, Msg any, E any](
 	dom := createElement(currentView, msgChan)
 	render(root, dom)
 
-	env := makeEnv(DefaultStd())
+	env := makeEnv(DefaultStd(root))
 
-	go initCmd(env, func(m Msg) { msgChan <- m })
+	for _, cmd := range initCmd {
+		go cmd(env, func(m Msg) { msgChan <- m })
+	}
 
 	for msg := range msgChan {
 		nextState, cmd := update(msg, currentState)

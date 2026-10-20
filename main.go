@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"time"
 
@@ -17,6 +18,16 @@ type SetGitHubActivity struct {
 }
 
 func (SetGitHubActivity) isUserMsg() {}
+
+type Pos struct {
+	x, y, w, h float64
+}
+
+type SetNodesPosition struct {
+	update, model, runtime, view, diagram Pos
+}
+
+func (SetNodesPosition) isUserMsg() {}
 
 type NextAction struct {
 }
@@ -300,11 +311,27 @@ func (NewMsg) isAction() {
 
 }
 
-func PlayGround(action CmdOrMsg) VNode[UserMsg] {
+func (h HTML[Msg]) arrow(x1, y1, x2, y2 float64, base Pos) VNode[Msg] {
+	dx, dy := x2-x1, y2-y1
+	length := math.Hypot(dx, dy)
+	angle := math.Atan2(dy, dx) * 180 / math.Pi
+
+	return h.Div(
+		h.Class("absolute h-0.5 bg-primary origin-left pointer-events-none"),
+		h.Attr("style", fmt.Sprintf(
+			"left:%.1fpx;top:%.1fpx;width:%.1fpx;transform:rotate(%.2fdeg)",
+			x1-base.x, y1-1-base.y, length, angle, // 太さ 2px なので、中心を y1 に合わせるため 1px 上げる
+		)),
+	)
+}
+
+func PlayGround(action CmdOrMsg, nodesPos NodesPos) VNode[UserMsg] {
 	h := HTML[UserMsg]{}
 
 	card := func(label string) VNode[UserMsg] {
 		return h.Div(
+			// h.Class("")
+			h.Attr("id", label),
 			h.Div(
 				h.Class("card bg-base-200 w-24 h-8"),
 				h.Div(
@@ -318,6 +345,31 @@ func PlayGround(action CmdOrMsg) VNode[UserMsg] {
 			),
 		)
 
+	}
+
+	// 斜めの矢印。rotate で向きを決め、active のときだけ矢印全体を進む向きに動かす。
+	// rotate-* は個別の rotate プロパティ、animate-arrow-slide は transform なので両立し、動きは回転後の向きに沿う
+	diagArrow := func(active bool, rotate string, label string) VNode[UserMsg] {
+		return h.Span(
+			// 外側は回転させない。ラベルを画面上の「上」に置くため
+			h.Class("relative inline-flex items-center justify-center"),
+			// アニメーション中だけ、矢印の上にラベルを出す。回転した矢印は箱の外にはみ出すので mb-4 で離す。
+			// 非アクティブ時も空の span を置き、子の数を変えないようにしている（diff がノードを丸ごと作り直さないため）
+			If(active,
+				h.Span(
+					h.Class("absolute bottom-full left-1/2 mb-4 -translate-x-1/2 badge badge-xs badge-neutral font-mono"),
+					h.Text(label),
+				),
+				h.Span(),
+			),
+			// 文字の矢印を伸ばすと鏃まで潰れるので、軸（丸めた線）と鏃（2辺だけ枠線を付けて45度回した正方形）を別々に描く
+			h.Span(
+				h.Class("inline-flex items-center "+rotate+" "+
+					If(active, "animate-arrow-slide [--arrow-dx:10px]", "opacity-20")),
+				h.Span(h.Class("block h-0.5 w-10 rounded-full bg-black")),
+				h.Span(h.Class("block size-2.5 -ml-2.5 rotate-45 rounded-tr-[2px] border-t-2 border-r-2 border-black")),
+			),
+		)
 	}
 
 	// var content VNode[UserMsg]
@@ -339,51 +391,33 @@ func PlayGround(action CmdOrMsg) VNode[UserMsg] {
 	return h.Div(
 		h.Class("mockup-window bg-base-100 border border-base-300 shadow-lg"),
 		h.Div(
-			h.Class("grid place-content-center border-t border-base-300 h-80"),
+			// h.Class("w-full"),
+			h.Class("w-full grid place-content-center border-t border-base-300 h-80"),
 			h.Button(
-				h.Class("btn"),
+				h.Class("btn mb-5"),
 				h.Text("next"),
 				OnClick(func() UserMsg { return NextAction{} }),
 			),
-			h.Div(
-				h.Class(""),
-				h.Div(
-					h.Class("flex w-full gap-x-2"),
-					card("update"),
-					card("model"),
-				),
 
-				h.Div(
-					h.Class("w-full"),
-					// card("runtime"),
-					h.Div(
-						h.Class("card bg-base-200 w-48 h-8 mx-auto"),
-						h.Div(
-							h.Class("mx-auto my-auto"),
-							h.P(
-								h.Text("runtime"),
-								h.Class("font-semibold"),
-							),
-						),
-						// h.Div(h.Class("h-0 w-0 border-x-8 border-x-transparent border-b-8 border-b-blue-600")),
-					),
-				),
+			//        1        2    3       4    5
+			//   r1   .        .    Update  .    .
+			//   r2   .        ↗    .       ↘    .
+			//   r3   Runtime  .    (now)   .    Model
+			//   r4   .        ↖    .       ↙    .
+			//   r5   .        .    View    .    .
+			h.Div(
+				h.Class("grid grid-cols-[repeat(5,6rem)] grid-rows-[repeat(5,2.5rem)] gap-2 place-items-center"),
+				h.Div(h.Class("col-start-3 row-start-1"), card("Update")),
+				h.Div(h.Class("col-start-1 row-start-3"), card("Runtime")),
+				h.Div(h.Class("col-start-5 row-start-3"), card("Model")),
+				h.Div(h.Class("col-start-3 row-start-5"), card("View")),
+
+				h.Div(h.Class("col-start-2 row-start-4"), diagArrow(isActionMsg, "rotate-[225deg]", "Msg")), // View → Runtime（↖）
+				h.Div(h.Class("col-start-2 row-start-2"), diagArrow(isActionMsg, "-rotate-45", "Msg")),      // Runtime → Update（↗）
+
+				h.Div(h.Class("col-start-4 row-start-2"), diagArrow(isActionCmd, "rotate-45", "Cmd")),       // Update → Model（↘）
+				h.Div(h.Class("col-start-4 row-start-4"), diagArrow(isActionCmd, "rotate-[135deg]", "Cmd")), // Model → View（↙）
 			),
-			// h.Div(
-			// 	h.Class("flex gap-x-15"),
-			// 	card("View"),
-			// 	If(
-			// 		isActionMsg,
-			// 		h.Span(h.Class("inline-block text-flow animate-flow animate-arrow-slide font-mono"), h.Text("———▶")),
-			// 		h.Span(h.Class("inline-block font-mono"), h.Text("———▶")),
-			// 	),
-			// 	card("Runtime"),
-			// 	If(
-			// 		isActionCmd,
-			// 		h.Span(h.Class("inline-block text-flow animate-flow animate-arrow-slide font-mono"), h.Text("———▶")),
-			// 		h.Span(h.Class("inline-block font-mono"), h.Text("———▶")),
-			// 	),
-			// ),
 		),
 	)
 }
@@ -402,12 +436,17 @@ type ActionMsg struct {
 
 func (ActionMsg) isCmdOrMsg() {}
 
+type NodesPos struct {
+	update, model, view, runtime, diagram Pos
+}
+
 type UserState struct {
 	counterValue  int
 	time          string
 	commits       maybe.Maybe[[]GithubCommit]
 	action        CmdOrMsg
 	actionHistory []CmdOrMsg
+	nodesPos      NodesPos
 }
 
 type GithubCommit struct {
@@ -487,7 +526,7 @@ func main() {
 					h.Class("flex flex-col gap-y-10 my-10 w-full lg:w-240 lg:px-0 px-4 mx-auto"),
 					// lg:px-80
 					// h.NavBar(),
-					PlayGround(state.action),
+					PlayGround(state.action, state.nodesPos),
 					h.Profile(),
 					h.Activity(state.commits),
 					h.Works(),
@@ -507,29 +546,51 @@ func main() {
 			state.actionHistory = append(state.actionHistory, ActionMsg{name: reflect.TypeOf(msg).String()})
 
 		case NextAction:
-			pretty.Println("next action required")
+			// pretty.Println("next action required")
 			state.actionHistory = append(state.actionHistory, ActionMsg{name: reflect.TypeOf(msg).String()})
 
 			frontAction := state.actionHistory[0]
-			pretty.Println("front action", frontAction)
+			// pretty.Println("front action", frontAction)
 			// 先頭をポップ
 			state.actionHistory = state.actionHistory[1:]
 
 			state.action = frontAction
 
+			cmd := AsyncDo(func(e UserEff) UserMsg {
+				runtimePos := e.GetPosition("Runtime")
+				updatePos := e.GetPosition("Update")
+				modelPos := e.GetPosition("Model")
+				viewPos := e.GetPosition("View")
+				diagram := e.GetPosition("Diagram")
+				// pretty.Println(x, y, w, h)
+
+				return SetNodesPosition{runtime: runtimePos, update: updatePos, model: modelPos, view: viewPos, diagram: diagram}
+			})
+
+			return state, cmd
+
 		case AppendCmdOrMsg:
 			// pretty.Println("AppendCmdOrMsgOrMsg")
 			state.actionHistory = append(state.actionHistory, m.cmdOrMsg)
+		case SetNodesPosition:
+			pretty.Println(m)
+
+			state.nodesPos.model = m.model
+			state.nodesPos.view = m.view
+			state.nodesPos.update = m.update
+			state.nodesPos.runtime = m.runtime
+			state.nodesPos.diagram = m.diagram
+
 		default:
 			// pretty.Println("update: receive ", m)
 		}
 
-		pretty.Println("1", state.actionHistory)
+		// pretty.Println("1", state.actionHistory)
 
 		return state, None[UserEff, UserMsg]()
 	}
 
-	init := func() (UserState, Cmd[UserEff, UserMsg]) {
+	init := func() (UserState, []Cmd[UserEff, UserMsg]) {
 		initAction := TaggedAsyncDo[UserEff, UserMsg](
 			func(e UserEff) UserMsg {
 				commits := e.GetActivity(e)
@@ -538,10 +599,33 @@ func main() {
 			AppendCmdOrMsg{cmdOrMsg: ActionCmd{"GetGitHubActivity"}},
 		)
 
-		return UserState{commits: maybe.Nothing[[]GithubCommit](), action: ActionCmd{}, actionHistory: []CmdOrMsg{}}, initAction
+		// cmd := AsyncDo(func(e UserEff) UserMsg {
+		// 	runtimePos := e.GetPosition("Runtime")
+		// 	updatePos := e.GetPosition("Update")
+		// 	modelPos := e.GetPosition("Model")
+		// 	viewPos := e.GetPosition("View")
+		// 	// pretty.Println(x, y, w, h)
+
+		// 	return SetNodesPosition{runtime: runtimePos, update: updatePos, model: modelPos, view: viewPos}
+		// })
+
+		return UserState{
+				commits:       maybe.Nothing[[]GithubCommit](),
+				action:        ActionCmd{},
+				actionHistory: []CmdOrMsg{},
+				nodesPos:      NodesPos{},
+			},
+			[]Cmd[UserEff, UserMsg]{initAction}
+
 	}
 
 	root := dom.GetWindow().Document().QuerySelector("#app")
+	go func() {
+		time.Sleep(time.Second * 1)
+		doc := dom.GetWindow().Document()
+		// doc.
+		pretty.Println("==============", doc.QuerySelector("#Runtime").GetBoundingClientRect().Left())
+	}()
 
 	Launch(
 		root,

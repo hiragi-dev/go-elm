@@ -4,6 +4,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+
+	"honnef.co/go/js/dom/v2"
 )
 
 type Http interface {
@@ -15,14 +17,32 @@ type Console interface {
 	Log(content string)
 }
 
+type Dom interface {
+	GetPosition(id string) Pos
+}
+
 type Std interface {
 	Http
 	Console
+	Dom
 }
 
-type browserStd struct{}
+type browserStd struct {
+	root dom.Element
+}
 
-func DefaultStd() Std { return browserStd{} }
+func DefaultStd(root dom.Element) Std { return browserStd{root} }
+
+func (r browserStd) GetPosition(id string) Pos {
+	// pretty.Println("======", r.root)
+
+	el := r.root.QuerySelector("#" + id)
+	rect := el.GetBoundingClientRect()
+
+	// pretty.Println(el, rect)
+
+	return Pos{rect.Left(), rect.Top(), rect.Width(), rect.Height()}
+}
 
 func (r browserStd) Get(url string, queries url.Values) string {
 	client := &http.Client{}
