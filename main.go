@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/kr/pretty"
@@ -16,6 +17,17 @@ type SetGitHubActivity struct {
 }
 
 func (SetGitHubActivity) isUserMsg() {}
+
+type NextAction struct {
+}
+
+func (NextAction) isUserMsg() {}
+
+type AppendCmdOrMsg struct {
+	cmdOrMsg CmdOrMsg
+}
+
+func (AppendCmdOrMsg) isUserMsg() {}
 
 func (h HTML[Msg]) Typ(content string) VNode[Msg] {
 	return h.P(
@@ -47,6 +59,7 @@ func (h HTML[M]) Profile() VNode[M] {
 	}
 
 	return h.Content(
+		"プロフィール",
 		"PROFILE",
 		h.Div(
 			h.Class("card bg-base-100 shadow-lg"),
@@ -87,11 +100,16 @@ func (h HTML[M]) Profile() VNode[M] {
 	)
 }
 
-func (h HTML[M]) Content(header string, inner VNode[M]) VNode[M] {
+func (h HTML[M]) Content(header string, headerSub string, inner VNode[M]) VNode[M] {
 	return h.Div(
+		h.P(
+			h.Text(headerSub),
+			h.Class("text-xs mb-1 font-mono font-semibold tracking-widest text-violet-600"),
+		),
 		h.Hn(2,
 			h.Text(header),
-			h.Class("mb-2 text-md font-semibold tracking-tight text-violet-600"),
+			// h.Class("mb-2 text-md font-semibold tracking-tight text-violet-600"),
+			h.Class("mb-4 text-md font-semibold tracking-tight"),
 		),
 		inner,
 	)
@@ -118,9 +136,19 @@ func (h HTML[M]) Works() VNode[M] {
 	}
 
 	return h.Content(
+		"作例",
 		"WORKS",
 		h.Ul(
-			h.Class("list bg-base-100 rounded-box shadow-md overflow-hidden"),
+			h.Class("list bg-base-100 rounded-box shadow-lg overflow-hidden"),
+			listRow(
+				h.Div(
+					h.Class("size-10 rounded-box"),
+					h.Img("https://cdn.simpleicons.org/github"),
+				),
+				"Go-Elm",
+				"Go言語用Elmアーキテクチャベースのフロントエンドフレームワーク",
+				"https://github.com/hiragi-dev/go-elm",
+			),
 			listRow(
 				h.Div(
 					h.Class("size-10 rounded-box"),
@@ -145,7 +173,7 @@ func (h HTML[M]) Works() VNode[M] {
 
 func (h HTML[Msg]) NavBar() VNode[Msg] {
 	return h.Div(
-		h.Class("navbar bg-base-100 shadow-sm"),
+		h.Class("navbar bg-base-100 shadow-lg"),
 		h.Div(
 			h.Class("flex w-full lg:w-240 lg:px-0 px-4 mx-auto justify-between"),
 			h.Div(
@@ -166,7 +194,7 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VNode[Msg] {
 
 	tableEntry := func(key string, repoName string, value string, colorAttr ColorAttr) VNode[Msg] {
 		return h.Tr(
-			h.Th(
+			h.Td(
 				h.Class("px-0"),
 				h.Text(key),
 			),
@@ -219,9 +247,9 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VNode[Msg] {
 			h.Class("table"),
 			h.Thead(
 				h.Tr(
-					h.Th(h.Text("Time")),
+					h.Th(h.Text("Date"), h.Class("text-aligh; left pl-0")),
 					h.Th(h.Text("Repository")),
-					h.Th(h.Text("commit message")),
+					h.Th(h.Text("Commit Message")),
 				),
 			),
 			table,
@@ -236,6 +264,7 @@ func (h HTML[Msg]) Activity(commits maybe.Maybe[[]GithubCommit]) VNode[Msg] {
 	}
 
 	return h.Content(
+		"アクティビティ",
 		"ACTIVITY",
 		h.Div(
 			h.Class("card bg-base-100 shadow-lg"),
@@ -258,21 +287,127 @@ func (h HTML[Msg]) UserFooter() VNode[Msg] {
 	return h.Footer(
 		h.Class("footer bg-base-200 p-10 px-40 flex justify-center"),
 		h.Nav(
-			// h.Hn(6,
-			// 	h.Class("footer-title"),
-			// 	h.Text("Socicl"),
-			// ),
-			// h.P(h.Text(" © 2026 hiragi")),
-			// h.P(h.Text("Github / Qiita")),
 			h.Typ("© 2026 hiragi. All rights reserved."),
 		),
 	)
 }
 
+type Action interface{ isAction() }
+
+type NewMsg struct{}
+
+func (NewMsg) isAction() {
+
+}
+
+func PlayGround(action CmdOrMsg) VNode[UserMsg] {
+	h := HTML[UserMsg]{}
+
+	card := func(label string) VNode[UserMsg] {
+		return h.Div(
+			h.Div(
+				h.Class("card bg-base-200 w-24 h-8"),
+				h.Div(
+					h.Class("mx-auto my-auto"),
+					h.P(
+						h.Text(label),
+						h.Class("font-semibold"),
+					),
+				),
+				// h.Div(h.Class("h-0 w-0 border-x-8 border-x-transparent border-b-8 border-b-blue-600")),
+			),
+		)
+
+	}
+
+	// var content VNode[UserMsg]
+	var isActionMsg = false
+	var isActionCmd = false
+	switch a := action.(type) {
+
+	case ActionMsg:
+		isActionMsg = true
+		_ = a
+	case ActionCmd:
+		isActionCmd = true
+		_ = a
+
+	}
+
+	pretty.Println(isActionCmd, isActionMsg)
+
+	return h.Div(
+		h.Class("mockup-window bg-base-100 border border-base-300 shadow-lg"),
+		h.Div(
+			h.Class("grid place-content-center border-t border-base-300 h-80"),
+			h.Button(
+				h.Class("btn"),
+				h.Text("next"),
+				OnClick(func() UserMsg { return NextAction{} }),
+			),
+			h.Div(
+				h.Class(""),
+				h.Div(
+					h.Class("flex w-full gap-x-2"),
+					card("update"),
+					card("model"),
+				),
+
+				h.Div(
+					h.Class("w-full"),
+					// card("runtime"),
+					h.Div(
+						h.Class("card bg-base-200 w-48 h-8 mx-auto"),
+						h.Div(
+							h.Class("mx-auto my-auto"),
+							h.P(
+								h.Text("runtime"),
+								h.Class("font-semibold"),
+							),
+						),
+						// h.Div(h.Class("h-0 w-0 border-x-8 border-x-transparent border-b-8 border-b-blue-600")),
+					),
+				),
+			),
+			// h.Div(
+			// 	h.Class("flex gap-x-15"),
+			// 	card("View"),
+			// 	If(
+			// 		isActionMsg,
+			// 		h.Span(h.Class("inline-block text-flow animate-flow animate-arrow-slide font-mono"), h.Text("———▶")),
+			// 		h.Span(h.Class("inline-block font-mono"), h.Text("———▶")),
+			// 	),
+			// 	card("Runtime"),
+			// 	If(
+			// 		isActionCmd,
+			// 		h.Span(h.Class("inline-block text-flow animate-flow animate-arrow-slide font-mono"), h.Text("———▶")),
+			// 		h.Span(h.Class("inline-block font-mono"), h.Text("———▶")),
+			// 	),
+			// ),
+		),
+	)
+}
+
+type CmdOrMsg interface{ isCmdOrMsg() }
+
+type ActionCmd struct {
+	name string
+}
+
+func (ActionCmd) isCmdOrMsg() {}
+
+type ActionMsg struct {
+	name string
+}
+
+func (ActionMsg) isCmdOrMsg() {}
+
 type UserState struct {
-	counterValue int
-	time         string
-	commits      maybe.Maybe[[]GithubCommit]
+	counterValue  int
+	time          string
+	commits       maybe.Maybe[[]GithubCommit]
+	action        CmdOrMsg
+	actionHistory []CmdOrMsg
 }
 
 type GithubCommit struct {
@@ -293,6 +428,11 @@ type githubInfo struct {
 func (r githubInfo) GetActivity(e Http) []GithubCommit {
 	return GetGitHubActivity(e)
 }
+
+// func (r UserEffSt) GetActivity(e Http) []GithubCommit {
+// 	// r.trace("GetActivity")
+// 	return GetGitHubActivity(e)
+// }
 
 type githubInfoMock struct {
 }
@@ -326,6 +466,12 @@ func DefaultUserEff(std Std) UserEff {
 	return UserEffSt{std, githubInfoMock{}}
 }
 
+// func TaggedAsyncDo[E, M any](c Cmd[E, M], wrap func(env E, trace func(string)) E) Cmd[E, M] {
+// 	return func(env E, send func(M)) {
+// 		traced := wrap(env, func(s string) { send(SetGitHubActivity{}) })
+// 	}
+// }
+
 func main() {
 	h := HTML[UserMsg]{}
 
@@ -341,6 +487,7 @@ func main() {
 					h.Class("flex flex-col gap-y-10 my-10 w-full lg:w-240 lg:px-0 px-4 mx-auto"),
 					// lg:px-80
 					// h.NavBar(),
+					PlayGround(state.action),
 					h.Profile(),
 					h.Activity(state.commits),
 					h.Works(),
@@ -351,26 +498,47 @@ func main() {
 	}
 
 	update := func(msg UserMsg, state UserState) (UserState, Cmd[UserEff, UserMsg]) {
+		// pretty.Println("2", state.actionHistory)
+		// state.actionHistory = append(state.actionHistory, ActionMsg{name: reflect.TypeOf(msg).String()})
+
 		switch m := msg.(type) {
 		case SetGitHubActivity:
 			state.commits = maybe.Just(m.commits)
+			state.actionHistory = append(state.actionHistory, ActionMsg{name: reflect.TypeOf(msg).String()})
+
+		case NextAction:
+			pretty.Println("next action required")
+			state.actionHistory = append(state.actionHistory, ActionMsg{name: reflect.TypeOf(msg).String()})
+
+			frontAction := state.actionHistory[0]
+			pretty.Println("front action", frontAction)
+			// 先頭をポップ
+			state.actionHistory = state.actionHistory[1:]
+
+			state.action = frontAction
+
+		case AppendCmdOrMsg:
+			// pretty.Println("AppendCmdOrMsgOrMsg")
+			state.actionHistory = append(state.actionHistory, m.cmdOrMsg)
 		default:
 			// pretty.Println("update: receive ", m)
 		}
+
+		pretty.Println("1", state.actionHistory)
 
 		return state, None[UserEff, UserMsg]()
 	}
 
 	init := func() (UserState, Cmd[UserEff, UserMsg]) {
-		initAction := AsyncDo(func(e UserEff) UserMsg {
-			commits := e.GetActivity(e)
-			// commits := []GithubCommit{{message: "test", repoName: "reporepo"}}
-			pretty.Println(commits)
-			// return SetGitHubActivity{commits: commits}
-			return SetGitHubActivity{commits}
-		})
+		initAction := TaggedAsyncDo[UserEff, UserMsg](
+			func(e UserEff) UserMsg {
+				commits := e.GetActivity(e)
+				return SetGitHubActivity{commits}
+			},
+			AppendCmdOrMsg{cmdOrMsg: ActionCmd{"GetGitHubActivity"}},
+		)
 
-		return UserState{commits: maybe.Nothing[[]GithubCommit]()}, initAction
+		return UserState{commits: maybe.Nothing[[]GithubCommit](), action: ActionCmd{}, actionHistory: []CmdOrMsg{}}, initAction
 	}
 
 	root := dom.GetWindow().Document().QuerySelector("#app")

@@ -6,8 +6,6 @@ import (
 	"net/url"
 	"slices"
 	"time"
-
-	"github.com/kr/pretty"
 )
 
 func parseGitHubCommitsResponse(body string) []GithubCommit {
@@ -27,7 +25,7 @@ func parseGitHubCommitsResponse(body string) []GithubCommit {
 		// return GotGitHubActivityFailed{err} // など、失敗の Msg にする
 	}
 
-	pretty.Println(body)
+	// pretty.Println(body)
 
 	jst := time.FixedZone("Asia/Tokyo", 9*60*60)
 
@@ -112,7 +110,7 @@ func GetGitHubActivity[E Http](r E) []GithubCommit {
 		}
 	})
 
-	pretty.Println(commits)
+	// pretty.Println(commits)
 
 	return commits
 	// })

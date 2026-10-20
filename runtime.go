@@ -9,6 +9,16 @@ import (
 
 type Cmd[Env any, M any] func(r Env, send func(M))
 
+func TaggedAsyncDo[E, M any](f func(e E) M, m M) Cmd[E, M] {
+	c := AsyncDo(f)
+
+	return func(r E, send func(M)) {
+		// wrap(send)
+		send(m)
+		c(r, send)
+	}
+}
+
 func AsyncDo[Env, M any](f func(e Env) M) Cmd[Env, M] {
 	return func(r Env, send func(M)) {
 		send(f(r))
@@ -93,14 +103,20 @@ func Launch[State any, Msg any, E any](
 
 	for msg := range msgChan {
 		nextState, cmd := update(msg, currentState)
+		currentState = nextState
+
+		// pretty.Println(reflect.TypeOf(cmd))
 
 		go cmd(env, func(m Msg) { msgChan <- m })
 
 		nextView := view(nextState)
-		patch := diff(currentView, nextView)
+		render(root, createElement(nextView, msgChan))
+		// patch := diff(currentView, nextView)
 
-		currentView = nextView
+		// // pretty.Println(patch)
 
-		applyPatch(root, patch, msgChan)
+		// currentView = nextView
+
+		// applyPatch(root, patch, msgChan)
 	}
 }

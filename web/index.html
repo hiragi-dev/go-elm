@@ -19,6 +19,56 @@
           background-position: 200% center;
         }
       }
+
+      /* animate-arrow-slide: 矢印が進む向きに少し動いて戻る。向きは --arrow-dx / --arrow-dy で変える（既定は右）
+         transform を使うので、span には inline-block が必要 */
+      --animate-arrow-slide: arrow-slide 1.2s ease-in-out infinite;
+
+      @keyframes arrow-slide {
+        0%, 100% {
+          transform: translate(0, 0);
+          opacity: 0.45;
+        }
+        50% {
+          transform: translate(var(--arrow-dx, -6px), var(--arrow-dy, 0));
+          opacity: 1;
+        }
+      }
+
+      /* animate-flow: text-flow と組み合わせて、矢印の文字列の上を明るい帯が流れる */
+      --animate-flow: flow 1.5s linear infinite;
+
+      @keyframes flow {
+        to {
+          background-position: 200% center;
+        }
+      }
+
+      /* animate-glow: primary 色の光が周囲でゆっくり脈打つ。カードなど常に目を引かせたい要素に付ける */
+      --animate-glow: glow 2.4s ease-in-out infinite;
+
+      @keyframes glow {
+        0%, 100% {
+          box-shadow: 0 0 0 0 color-mix(in oklch, var(--color-primary) 45%, transparent),
+                      0 0 12px 0 color-mix(in oklch, var(--color-primary) 25%, transparent);
+        }
+        50% {
+          box-shadow: 0 0 0 4px color-mix(in oklch, var(--color-primary) 20%, transparent),
+                      0 0 28px 6px color-mix(in oklch, var(--color-primary) 45%, transparent);
+        }
+      }
+    }
+
+    /* text-flow: 文字を薄い色で描き、中央だけ primary 色の帯にする。animate-flow で帯が左から右へ流れる。
+       両端を同じ色にして、一周したときに継ぎ目が出ないようにしている */
+    @utility text-flow {
+      background-image: linear-gradient(to right,
+          color-mix(in oklch, var(--color-base-content) 30%, transparent) 0% 35%,
+          var(--color-primary) 50%,
+          color-mix(in oklch, var(--color-base-content) 30%, transparent) 65% 100%);
+      background-size: 200% auto;
+      background-clip: text;
+      color: transparent;
     }
 
     /* text-rainbow: 文字そのものを虹色にする。背景を文字の幅の2倍にして、流したときに継ぎ目が出ないよう最初と最後を同じ色にしている */

@@ -121,6 +121,11 @@ func (h HTML[Msg]) Nav(applier ...Applier[Msg]) VNode[Msg] {
 	return *CreateVNode[Msg]("nav").Apply(applier...)
 }
 
+func (h HTML[Msg]) Svg(applier ...Applier[Msg]) VNode[Msg] {
+	return *CreateVNode[Msg]("nav").Apply(applier...)
+
+}
+
 func (h HTML[Msg]) Attr(key string, value string) Attribute[Msg] {
 	return Attribute[Msg]{key, value}
 }
